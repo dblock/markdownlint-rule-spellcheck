@@ -155,63 +155,67 @@ function replacement(word, suggestions, correct) {
   return correct(result) ? result : undefined;
 }
 
-/** @type {import("markdownlint").Rule} */
-const rule = {
-  "names": [ "spellcheck" ],
-  "description": "Prose words should be spelled correctly",
-  "information": new URL("https://github.com/dblock/markdownlint-rule-spellcheck"),
-  "tags": [ "spelling" ],
-  "parser": "micromark",
-  "function": (params, onError) => {
-    const config = params.config;
-    if ((config.autocorrect !== undefined) && (typeof config.autocorrect !== "boolean")) {
-      throw new Error("spellcheck.autocorrect must be a boolean.");
-    }
-    if (config.dictionaryFiles !== undefined) {
-      throw new Error("spellcheck.dictionaryFiles has been replaced by spellcheck.dictionaries. Include English explicitly alongside .txt files.");
-    }
-    const dictionary = getDictionaries(config.dictionaries === undefined ? [ "@cspell/dict-en_us" ] : config.dictionaries);
-    const correct = (word) => dictionary.has(word, { "ignoreCase": false });
-    const suggestionsByWord = new Map();
-    for (const token of proseTokens(params.parsers.micromark.tokens)) {
-      const text = token.text.replace(nonProsePattern, (match) => " ".repeat(match.length));
-      const lines = text.split(/\r\n|\r|\n/u);
-      for (const [ index, line ] of lines.entries()) {
-        const lineNumber = token.startLine + index;
-        const startColumn = index ? 1 : token.startColumn;
-        const source = params.lines[lineNumber - 1];
-        for (const match of line.matchAll(wordPattern)) {
-          const word = match[0];
-          if (correct(word)) {
-            continue;
+export function createRule({ suggestions: includeSuggestions = true } = {}) {
+  /** @type {import("markdownlint").Rule} */
+  const rule = {
+    "names": [ "spellcheck" ],
+    "description": "Prose words should be spelled correctly",
+    "information": new URL("https://github.com/dblock/markdownlint-rule-spellcheck"),
+    "tags": [ "spelling" ],
+    "parser": "micromark",
+    "function": (params, onError) => {
+      const config = params.config;
+      if ((config.autocorrect !== undefined) && (typeof config.autocorrect !== "boolean")) {
+        throw new Error("spellcheck.autocorrect must be a boolean.");
+      }
+      if (config.dictionaryFiles !== undefined) {
+        throw new Error("spellcheck.dictionaryFiles has been replaced by spellcheck.dictionaries. Include English explicitly alongside .txt files.");
+      }
+      const dictionary = getDictionaries(config.dictionaries === undefined ? [ "@cspell/dict-en_us" ] : config.dictionaries);
+      const correct = (word) => dictionary.has(word, { "ignoreCase": false });
+      const suggestionsByWord = new Map();
+      for (const token of proseTokens(params.parsers.micromark.tokens)) {
+        const text = token.text.replace(nonProsePattern, (match) => " ".repeat(match.length));
+        const lines = text.split(/\r\n|\r|\n/u);
+        for (const [ index, line ] of lines.entries()) {
+          const lineNumber = token.startLine + index;
+          const startColumn = index ? 1 : token.startColumn;
+          const source = params.lines[lineNumber - 1];
+          for (const match of line.matchAll(wordPattern)) {
+            const word = match[0];
+            if (correct(word)) {
+              continue;
+            }
+            const first = startColumn - 1 + match.index;
+            const last = first + word.length;
+            // Do not diagnose fragments of entity-encoded words.
+            if (/&(?:#x[\da-f]+|#\d+|[a-z][\da-z]+);$/iu.test(source.slice(0, first)) ||
+                /^&(?:#x[\da-f]+|#\d+|[a-z][\da-z]+);/iu.test(source.slice(last))) {
+              continue;
+            }
+            let suggestions = suggestionsByWord.get(word);
+            if (!suggestions && includeSuggestions) {
+              suggestions = dictionary.suggest(word, { "numSuggestions": 3, "numChanges": 2, "timeout": 100 })
+                .map((suggestion) => suggestion.word);
+              suggestionsByWord.set(word, suggestions);
+            }
+            suggestions ??= [];
+            const fix = config.autocorrect && standalone(source, first, last) ?
+              replacement(word, suggestions, correct) : undefined;
+            onError({
+              lineNumber,
+              "detail": `Misspelled word: "${word}".${suggestions.length ? ` Suggestions: ${suggestions.join(", ")}.` : ""}`,
+              "range": [ first + 1, word.length ],
+              ...(fix ? {
+                "fixInfo": { "editColumn": first + 1, "deleteCount": word.length, "insertText": fix }
+              } : {})
+            });
           }
-          const first = startColumn - 1 + match.index;
-          const last = first + word.length;
-          // Do not diagnose fragments of entity-encoded words.
-          if (/&(?:#x[\da-f]+|#\d+|[a-z][\da-z]+);$/iu.test(source.slice(0, first)) ||
-              /^&(?:#x[\da-f]+|#\d+|[a-z][\da-z]+);/iu.test(source.slice(last))) {
-            continue;
-          }
-          let suggestions = suggestionsByWord.get(word);
-          if (!suggestions) {
-            suggestions = dictionary.suggest(word, { "numSuggestions": 3, "numChanges": 2, "timeout": 100 })
-              .map((suggestion) => suggestion.word);
-            suggestionsByWord.set(word, suggestions);
-          }
-          const fix = config.autocorrect && standalone(source, first, last) ?
-            replacement(word, suggestions, correct) : undefined;
-          onError({
-            lineNumber,
-            "detail": `Misspelled word: "${word}".${suggestions.length ? ` Suggestions: ${suggestions.join(", ")}.` : ""}`,
-            "range": [ first + 1, word.length ],
-            ...(fix ? {
-              "fixInfo": { "editColumn": first + 1, "deleteCount": word.length, "insertText": fix }
-            } : {})
-          });
         }
       }
     }
-  }
-};
+  };
+  return rule;
+}
 
-export default rule;
+export default createRule();
