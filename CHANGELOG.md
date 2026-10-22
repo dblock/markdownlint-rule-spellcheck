@@ -1,6 +1,6 @@
 # Changelog
 
-## (Next)
+## 0.1.0 (2026/10/22)
 
 * [#12](https://github.com/dblock/markdownlint-rule-spellcheck/pull/12): Group dictionaries by language and move front matter options under `markdown`; replace flat dictionary arrays with language maps and `spellcheck.frontMatter` with `spellcheck.markdown.frontMatter` — [@dblock](https://github.com/dblock).
 * [#11](https://github.com/dblock/markdownlint-rule-spellcheck/pull/11): Check YAML front matter strings by default with nested field selection and precise source ranges; requires disabling markdownlint front matter stripping — [@dblock](https://github.com/dblock).

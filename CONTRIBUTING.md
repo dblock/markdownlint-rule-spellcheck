@@ -21,3 +21,5 @@ Run the dictionary collector locally with `node cli.mjs collect "**/*.md" --outp
 Linting checks JavaScript with ESLint and Markdown with markdownlint, including `markdownlint-rule-single-line-paragraphs` to keep paragraphs on one source line.
 
 Documentation is also checked with this project's spelling rule. Fix typos; add legitimate project terms to `.spellcheck.txt`. Test fixtures are excluded because they deliberately contain misspellings.
+
+See the [release guide](RELEASING.md) for release preparation and publishing.
