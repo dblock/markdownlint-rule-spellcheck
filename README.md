@@ -2,6 +2,7 @@
 
 [![CI](https://github.com/dblock/markdownlint-rule-spellcheck/actions/workflows/ci.yml/badge.svg)](https://github.com/dblock/markdownlint-rule-spellcheck/actions/workflows/ci.yml)
 [![Lint](https://github.com/dblock/markdownlint-rule-spellcheck/actions/workflows/lint.yml/badge.svg)](https://github.com/dblock/markdownlint-rule-spellcheck/actions/workflows/lint.yml)
+[![Coverage](https://coveralls.io/repos/github/dblock/markdownlint-rule-spellcheck/badge.svg?branch=main)](https://coveralls.io/github/dblock/markdownlint-rule-spellcheck?branch=main)
 [![Node.js: >=22.18](https://img.shields.io/badge/node-%3E%3D22.18-brightgreen.svg)](https://nodejs.org/)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 

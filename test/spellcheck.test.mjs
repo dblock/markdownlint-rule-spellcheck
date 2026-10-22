@@ -2,8 +2,6 @@ import assert from "node:assert/strict";
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { fileURLToPath } from "node:url";
-import { spawnSync } from "node:child_process";
 import test from "node:test";
 import { applyFixes } from "markdownlint";
 import { lint } from "markdownlint/sync";
@@ -138,29 +136,4 @@ test("package exports load the actual rule", async () => {
   const packageJson = JSON.parse(readFileSync(new URL("../package.json", import.meta.url)));
   const { default: exported } = await import(packageJson.name);
   assert.equal(exported, rule);
-});
-
-test("markdownlint-cli2 loads the published entry point and fixes an actual file", () => {
-  const dir = mkdtempSync(join(tmpdir(), "markdownlint-spellcheck-cli-"));
-  try {
-    const entry = fileURLToPath(new URL("../index.mjs", import.meta.url));
-    const cli = fileURLToPath(new URL("../node_modules/markdownlint-cli2/markdownlint-cli2-bin.mjs", import.meta.url));
-    writeFileSync(join(dir, ".markdownlint-cli2.jsonc"), JSON.stringify({
-      "customRules": [ entry ],
-      "config": { "default": false, "spellcheck": { "autocorrect": true } }
-    }));
-    const path = join(dir, "example.md");
-    writeFileSync(path, "# helo\n\n`mispelled` [hello](wrng.md)\n");
-    const run = (...args) => spawnSync(process.execPath, [ cli, ...args, "example.md" ], {
-      "cwd": dir, "encoding": "utf8"
-    });
-    const diagnostic = run();
-    assert.equal(diagnostic.status, 1, diagnostic.stderr);
-    assert.match(diagnostic.stderr, /example\.md:1:3.*spellcheck/u);
-    const fixed = run("--fix");
-    assert.equal(fixed.status, 0, fixed.stderr);
-    assert.equal(readFileSync(path, "utf8"), "# hello\n\n`mispelled` [hello](wrng.md)\n");
-  } finally {
-    rmSync(dir, { "recursive": true });
-  }
 });

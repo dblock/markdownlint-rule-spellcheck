@@ -8,6 +8,10 @@ npm run lint
 npm test
 ```
 
-For behavior changes, add a focused test in `test/spellcheck.test.mjs` and update `CHANGELOG.md`.
+For behavior changes, add a focused test in `test/spellcheck.test.mjs` or a CLI integration test in `test/integration/*.test.mjs` and update `CHANGELOG.md`.
+
+Integration tests copy Markdown inputs from `test/fixtures/` into temporary projects and compare fixed files with checked-in `.expected.md` fixtures stored next to their input files.
+
+Run `npm run coverage` for unit and integration coverage, including CLI subprocesses. Reports are written to `coverage/`; CI publishes them to Coveralls on Node 24.
 
 Linting checks JavaScript with ESLint and Markdown with markdownlint. Markdown paragraphs stay on one source line.
