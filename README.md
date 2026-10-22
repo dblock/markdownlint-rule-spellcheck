@@ -66,7 +66,7 @@ npx markdownlint-rule-spellcheck add ./.spellcheck.txt
 npx markdownlint-cli2 "**/*.md"
 ```
 
-`collect` refuses to overwrite an existing file. `add` updates `.markdownlint.json` without replacing existing settings or duplicating dictionaries. Use `--config path/to/config.json` for another JSON configuration; JSONC and YAML are not supported by `add`.
+`add` updates `.markdownlint.json` without replacing existing settings or duplicating dictionaries. Use `--config path/to/config.json` for another JSON configuration; JSONC and YAML are not supported by `add`.
 
 ## Configuration
 
@@ -127,19 +127,19 @@ Install dictionary packages in your project; English is included with the rule. 
 
 ### Creating a project dictionary
 
-The `collect` command shown above uses English by default. Repeat `--dictionary` to select other dictionaries:
+Run `collect`:
 
 ```sh
-npx markdownlint-rule-spellcheck collect "**/*.md" --dictionary @cspell/dict-en_us --dictionary @cspell/dict-software-terms --output .spellcheck.txt
+npx markdownlint-rule-spellcheck collect "**/*.md" --output .spellcheck.txt
 ```
 
-Candidates are sorted and deduplicated. Collection respects Markdown exclusions and suppression comments, but does not load your markdownlint configuration, including front matter field selections. Normal linting never changes dictionary files.
+Candidates are sorted and deduplicated, using your configured dictionaries, front matter field selections, file exclusions, and suppression comments.
+
+The output path defaults to `.spellcheck.txt` if omitted. Existing files are never overwritten. Review the file and remove typos before adding it to your dictionaries. Normal linting never changes dictionary files.
 
 Use `add --language` to put vocabulary under a specific language (default: `en`):
 
 ```sh
-npx markdownlint-rule-spellcheck collect "**/*.md" --dictionary @cspell/dict-es-es --output .spellcheck.es.txt
-# Review the candidates before accepting them.
 npx markdownlint-rule-spellcheck add ./.spellcheck.es.txt --language es
 ```
 
