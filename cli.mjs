@@ -3,9 +3,6 @@
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { relative, resolve } from "node:path";
 import { parseArgs } from "node:util";
-import { globby } from "globby";
-import { lint } from "markdownlint/sync";
-import { createRule } from "./index.mjs";
 
 const usage = "Usage: markdownlint-rule-spellcheck collect <globs...> [--output .spellcheck.txt] [--dictionary package-or-file ...]\n       markdownlint-rule-spellcheck add <dictionary.txt> [--config .markdownlint.json]";
 
@@ -62,6 +59,9 @@ try {
       writeFileSync(values.config, `${JSON.stringify(config, null, 2)}\n`, { "flag": exists ? "w" : "wx" });
       console.log(`Added ${entry} to ${values.config}.`);
     } else if (command === "collect" && patterns.length) {
+      const [ { globby }, { lint }, { createRule } ] = await Promise.all([
+        import("globby"), import("markdownlint/sync"), import("./index.mjs")
+      ]);
       const files = await globby(patterns, { "ignore": [ "node_modules/**", "coverage/**" ], "gitignore": true });
       if (!files.length) {
         throw new Error("No Markdown files matched the supplied patterns.");

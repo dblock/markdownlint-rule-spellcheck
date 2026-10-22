@@ -2,6 +2,10 @@ import assert from "node:assert/strict";
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { createRequire } from "node:module";
+import { gunzipSync } from "node:zlib";
+import { pathToFileURL } from "node:url";
+import { createSpellingDictionaryFromTrieFile } from "cspell-dictionary";
 import test from "node:test";
 import { applyFixes } from "markdownlint";
 import { lint } from "markdownlint/sync";
@@ -30,6 +34,38 @@ test("collection mode reports identical ranges without suggestions or fixes", ()
   assert.deepEqual(errors.map(({ errorRange }) => errorRange),
     lintContent(content).map(({ errorRange }) => errorRange));
   assert(errors.every((error) => !error.fixInfo && !error.errorDetail.includes("Suggestions:")));
+});
+
+test("reuses English suggestions across files without changing diagnostics", (t) => {
+  const require = createRequire(import.meta.url);
+  const dictionary = createSpellingDictionaryFromTrieFile(
+    gunzipSync(readFileSync(new URL("./en_US.trie.gz", pathToFileURL(require.resolve("@cspell/dict-en_us"))))),
+    "test", "test", {}
+  );
+  const spy = t.mock.method(Object.getPrototypeOf(dictionary), "suggest", () => []);
+  const first = lintContent("spelingg");
+  const second = lintContent("spelingg");
+  assert.deepEqual(second, first);
+  assert.equal(spy.mock.calls.filter(({ arguments: args }) => args[0] === "spelingg").length, 1);
+  for (let index = 0; index < 256; index++) {
+    lintContent(`qzxcache${String.fromCharCode(97 + Math.floor(index / 26))}${String.fromCharCode(97 + index % 26)}`);
+  }
+  assert.deepEqual(lintContent("spelingg"), first);
+  assert.equal(spy.mock.calls.filter(({ arguments: args }) => args[0] === "spelingg").length, 2);
+});
+
+test("local dictionary edits invalidate suggestions as well as accepted words", () => {
+  const dir = mkdtempSync(join(tmpdir(), "spellcheck-fresh-suggestions-"));
+  try {
+    const path = join(dir, "words.txt");
+    const config = { "dictionaries": [ path ], "autocorrect": true };
+    writeFileSync(path, "cat\n");
+    assert.equal(applyFixes("cot", lintContent("cot", config)), "cat");
+    writeFileSync(path, "cut\n");
+    assert.equal(applyFixes("cot", lintContent("cot", config)), "cut");
+  } finally {
+    rmSync(dir, { "recursive": true });
+  }
 });
 
 test("checks prose in headings, emphasis, lists, quotes, tables, links, and image labels", () => {

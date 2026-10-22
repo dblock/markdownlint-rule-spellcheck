@@ -20,6 +20,24 @@ const wordPattern = /(?<![\p{L}\p{M}\p{N}_])[\p{L}\p{M}]+(?:['’][\p{L}\p{M}]+)
 const wordOnly = /^[\p{L}\p{M}]+(?:['’][\p{L}\p{M}]+)*$/u;
 const nonProsePattern = /(?:https?:\/\/|mailto:|www\.)[^\s<>]+|[\p{L}\p{N}_.+-]+@[\p{L}\p{N}_.-]+/giu;
 const dictionaryCache = new Map();
+const suggestionCache = new WeakMap();
+const suggestionOptions = { "numSuggestions": 3, "numChanges": 2, "timeout": 100 };
+
+function suggest(dictionary, word) {
+  let cache = suggestionCache.get(dictionary);
+  if (!cache) {
+    cache = new Map();
+    suggestionCache.set(dictionary, cache);
+  }
+  if (!cache.has(word)) {
+    const suggestions = dictionary.suggest(word, suggestionOptions);
+    if (cache.size >= 256) {
+      cache.delete(cache.keys().next().value);
+    }
+    cache.set(word, suggestions);
+  }
+  return cache.get(word);
+}
 
 function getDictionaries(packages) {
   if (!Array.isArray(packages) || !packages.length ||
@@ -63,14 +81,18 @@ function getDictionaries(packages) {
     return loaded;
   });
   if (dictionaries.length === 1) {
-    return dictionaries[0];
+    const dictionary = dictionaries[0];
+    return {
+      "has": (word, options) => dictionary.has(word, options),
+      "suggest": (word) => suggest(dictionary, word)
+    };
   }
   const collection = createCollection(dictionaries, "spellcheck");
   return {
     "has": (word, options) => collection.has(word, options),
     "suggest": (word, options) => {
       // Collection suggestions do not apply each dictionary's weighted edit costs.
-      const ranked = dictionaries.flatMap((dictionary) => dictionary.suggest(word, options))
+      const ranked = dictionaries.flatMap((dictionary) => suggest(dictionary, word))
         .sort((a, b) => a.cost - b.cost);
       const seen = new Set();
       return ranked.filter(({ word: suggestion }) => {
@@ -195,7 +217,7 @@ export function createRule({ suggestions: includeSuggestions = true } = {}) {
             }
             let suggestions = suggestionsByWord.get(word);
             if (!suggestions && includeSuggestions) {
-              suggestions = dictionary.suggest(word, { "numSuggestions": 3, "numChanges": 2, "timeout": 100 })
+              suggestions = dictionary.suggest(word, suggestionOptions)
                 .map((suggestion) => suggestion.word);
               suggestionsByWord.set(word, suggestions);
             }
