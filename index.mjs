@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { dirname, resolve } from "node:path";
 import { gunzipSync } from "node:zlib";
-import { createSpellingDictionaryFromTrieFile } from "cspell-dictionary";
+import { createCollection, createSpellingDictionary, createSpellingDictionaryFromTrieFile } from "cspell-dictionary";
 
 const require = createRequire(import.meta.url);
 const excludedTypes = new Set([
@@ -19,22 +19,60 @@ const excludedTypes = new Set([
 const wordPattern = /(?<![\p{L}\p{M}\p{N}_])[\p{L}\p{M}]+(?:['’][\p{L}\p{M}]+)*(?![\p{L}\p{M}\p{N}_])/gu;
 const wordOnly = /^[\p{L}\p{M}]+(?:['’][\p{L}\p{M}]+)*$/u;
 const nonProsePattern = /(?:https?:\/\/|mailto:|www\.)[^\s<>]+|[\p{L}\p{N}_.+-]+@[\p{L}\p{N}_.-]+/giu;
-let english;
+const dictionaryCache = new Map();
 
-function getEnglish() {
-  if (!english) {
-    const configPath = require.resolve("@cspell/dict-en_us");
-    const config = JSON.parse(readFileSync(configPath, "utf8"));
-    const definition = config.dictionaryDefinitions.find(({ name }) => name === "en_us");
-    const path = resolve(dirname(configPath), definition.path);
-    english = createSpellingDictionaryFromTrieFile(
-      gunzipSync(readFileSync(path)),
-      definition.name,
-      path,
-      definition
-    );
+function getDictionaries(packages) {
+  if (!Array.isArray(packages) || !packages.length ||
+      packages.some((name) => typeof name !== "string" || !/^(?:@[\w.-]+\/)?[\w.-]+$/u.test(name))) {
+    throw new Error("spellcheck.dictionaries must be a nonempty array of installed CSpell package names.");
   }
-  return english;
+  const localRequire = createRequire(resolve("package.json"));
+  const dictionaries = packages.flatMap((name) => {
+    const configPath = name === "@cspell/dict-en_us" ? require.resolve(name) : localRequire.resolve(name);
+    if (dictionaryCache.has(configPath)) {
+      return dictionaryCache.get(configPath);
+    }
+    const config = JSON.parse(readFileSync(configPath, "utf8"));
+    if (!Array.isArray(config.dictionaryDefinitions) || !config.dictionaryDefinitions.length) {
+      throw new Error(`No dictionary definitions in ${configPath}.`);
+    }
+    const loaded = config.dictionaryDefinitions.map((definition) => {
+      if (!definition || typeof definition.name !== "string" || typeof definition.path !== "string") {
+        throw new Error(`Invalid dictionary definition in ${configPath}.`);
+      }
+      const path = resolve(dirname(configPath), definition.path);
+      if (!/\.(?:trie|txt)(?:\.gz)?$/u.test(path)) {
+        throw new Error(`Unsupported dictionary format: ${path}. Expected .trie or .txt, optionally gzipped.`);
+      }
+      const bytes = readFileSync(path);
+      const data = path.endsWith(".gz") ? gunzipSync(bytes) : bytes;
+      return /\.trie(?:\.gz)?$/u.test(path) ?
+        createSpellingDictionaryFromTrieFile(data, definition.name, path, definition) :
+        createSpellingDictionary(data.toString("utf8").split(/\r?\n/u), definition.name, path, definition);
+    });
+    dictionaryCache.set(configPath, loaded);
+    return loaded;
+  });
+  if (dictionaries.length === 1) {
+    return dictionaries[0];
+  }
+  const collection = createCollection(dictionaries, "spellcheck");
+  return {
+    "has": (word, options) => collection.has(word, options),
+    "suggest": (word, options) => {
+      // Collection suggestions do not apply each dictionary's weighted edit costs.
+      const ranked = dictionaries.flatMap((dictionary) => dictionary.suggest(word, options))
+        .sort((a, b) => a.cost - b.cost);
+      const seen = new Set();
+      return ranked.filter(({ word: suggestion }) => {
+        if (seen.has(suggestion) || collection.isForbidden(suggestion) || collection.isNoSuggestWord(suggestion)) {
+          return false;
+        }
+        seen.add(suggestion);
+        return true;
+      }).slice(0, options.numSuggestions);
+    }
+  };
 }
 
 function readVocabulary(files) {
@@ -126,7 +164,7 @@ const rule = {
       throw new Error("spellcheck.autocorrect must be a boolean.");
     }
     const vocabulary = readVocabulary(config.dictionaryFiles === undefined ? [] : config.dictionaryFiles);
-    const dictionary = getEnglish();
+    const dictionary = getDictionaries(config.dictionaries === undefined ? [ "@cspell/dict-en_us" ] : config.dictionaries);
     const correct = (word) => vocabulary.has(word) || dictionary.has(word, { "ignoreCase": false });
     const suggestionsByWord = new Map();
     for (const token of proseTokens(params.parsers.micromark.tokens)) {

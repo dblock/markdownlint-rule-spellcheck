@@ -74,7 +74,25 @@ In `.markdownlint.json`:
 
 Both options are optional. `dictionaryFiles` defaults to `[]`; paths are relative to the working directory, not the Markdown file. Each file contains one case-sensitive accepted word per line; blank lines and `#` comments are ignored.
 
-American English is bundled for offline use. Other languages, `cspell.json`, Hunspell files, and system or personal dictionaries are not supported.
+American English is included for offline use. To replace it, install a CSpell dictionary package:
+
+```sh
+npm install --save-dev @cspell/dict-es-es
+```
+
+Then configure `.markdownlint.json`:
+
+```json
+{
+  "spellcheck": {
+    "dictionaries": ["@cspell/dict-es-es"]
+  }
+}
+```
+
+Omitting `dictionaries` uses American English. An explicit nonempty list replaces it and supplies both accepted words and suggestions. To combine English with technical vocabulary, install `@cspell/dict-software-terms` and use `["@cspell/dict-en_us", "@cspell/dict-software-terms"]`.
+
+Packages are resolved from the working directory; English is included with the rule. Each package must export a JSON configuration with `dictionaryDefinitions` pointing to `.trie` or `.txt` files, optionally gzipped. All definitions in those packages are loaded offline; configuration imports, language settings, and other CSpell configuration are not applied. `dictionaryFiles` still adds accepted project words. Direct Hunspell files and system or personal dictionaries are not supported.
 
 ## Corrections
 
@@ -86,4 +104,4 @@ For example, `helo` becomes `hello`. Only the first suggestion is considered, an
 
 Checks spelling, not grammar, in headings, paragraphs, lists, quotes, tables, link labels, and image descriptions.
 
-Skips code, HTML blocks and tags, front matter, link destinations/titles/reference definitions, URLs, email addresses, and entity-encoded word fragments. Does not split identifiers or include technical dictionaries; add project terms through `dictionaryFiles`.
+Skips code, HTML blocks and tags, front matter, link destinations/titles/reference definitions, URLs, email addresses, and entity-encoded word fragments. Does not split identifiers; add project terms through `dictionaryFiles` or install technical dictionaries.
