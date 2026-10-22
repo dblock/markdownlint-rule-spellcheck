@@ -145,6 +145,13 @@ test("does not diagnose entity-encoded word fragments or escape markup", () => {
   assert.deepEqual(words("hello &amp; helo"), [ "helo" ]);
 });
 
+test("skips whole numeric and connector tokens and preserves apostrophe and accent ranges", () => {
+  assert.deepEqual(words("helo‿wrld helo＿wrld １２helo helo² can't2stop helo_name"), []);
+  assert.deepEqual(words("'helo' ‘helo’ helo-wrld _helo_ café hélo"),
+    [ "helo", "helo", "helo", "wrld", "helo", "hélo" ]);
+  assert.deepEqual(lintContent("can't can’t world's world’s"), []);
+});
+
 test("loads explicit case-sensitive vocabulary alongside English and rereads changed files", () => {
   const dir = mkdtempSync(join(tmpdir(), "markdownlint-spellcheck-"));
   try {

@@ -122,3 +122,5 @@ For example, `helo` becomes `hello`. Only the first suggestion is considered, an
 Checks spelling, not grammar, in headings, paragraphs, lists, quotes, tables, link labels, and image descriptions.
 
 Skips code, HTML blocks and tags, front matter, link destinations/titles/reference definitions, URLs, email addresses, and entity-encoded word fragments. Does not split identifiers; add project terms through `.txt` dictionaries or install technical dictionaries.
+
+Words start with a Unicode letter and retain combining marks and internal straight or curly apostrophes. Tokens containing numbers or connector punctuation (including underscores) are skipped as a whole: `sha256`, `can't2stop`, and `wrong_token` do not produce partial diagnostics. Hyphens separate words, so `helo-world` still flags `helo`, but is not autocorrected. Markdown emphasis such as `_helo_` is checked. Source spelling and accent representation are preserved without Unicode normalization.

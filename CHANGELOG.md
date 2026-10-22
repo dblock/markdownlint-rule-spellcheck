@@ -2,6 +2,7 @@
 
 ## (Next)
 
+* [#9](https://github.com/dblock/markdownlint-rule-spellcheck/pull/9): Preserve Unicode prose words and skip whole numeric and connector-punctuation tokens — [@dblock](https://github.com/dblock).
 * [#8](https://github.com/dblock/markdownlint-rule-spellcheck/pull/8): Reduce configuration command startup, reuse bounded dictionary suggestions across files, and cancel superseded PR workflow runs — [@dblock](https://github.com/dblock).
 * [#7](https://github.com/dblock/markdownlint-rule-spellcheck/pull/7): Speed up vocabulary collection by skipping suggestions and exclude suppressed words from candidates — [@dblock](https://github.com/dblock).
 * [#6](https://github.com/dblock/markdownlint-rule-spellcheck/pull/6): Spellcheck the project's own documentation and enforce single-line paragraphs in the lint workflow — [@dblock](https://github.com/dblock).
