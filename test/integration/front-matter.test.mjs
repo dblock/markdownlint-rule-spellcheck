@@ -35,7 +35,7 @@ test("collection uses decoded YAML vocabulary with code and body exclusions inta
 test("default Markdown rules do not check YAML header syntax", (t) => {
   const fixture = project(t, "front-matter");
   fixture.write(".markdownlint-cli2.jsonc", JSON.stringify({
-    "customRules": [ new URL("../../index.mjs", import.meta.url).pathname ],
+    "customRules": [ new URL("../../src/index.mjs", import.meta.url).pathname ],
     "config": { "default": true }
   }));
   fixture.write("example.md", '---\nlabel: helo\nsummary: "hello"\n---\n\n# Hello\n\nhello\n');

@@ -3,27 +3,23 @@
   "version": "0.2.0",
   "description": "A markdownlint custom rule for spelling checks powered by CSpell.",
   "type": "module",
-  "main": "index.mjs",
+  "main": "src/index.mjs",
   "exports": {
-    ".": "./index.mjs",
-    "./vocabulary-formatter": "./vocabulary-formatter.mjs"
+    ".": "./src/index.mjs",
+    "./vocabulary-formatter": "./src/vocabulary-formatter.mjs"
   },
   "bin": {
-    "markdownlint-rule-spellcheck": "./cli.mjs"
+    "markdownlint-rule-spellcheck": "./src/cli.mjs"
   },
   "files": [
     "CHANGELOG.md",
-    "index.mjs",
-    "front-matter.mjs",
-    "configuration.mjs",
-    "cli.mjs",
-    "vocabulary-formatter.mjs",
+    "src/",
     "README.md",
     "UPGRADING.md"
   ],
   "scripts": {
     "lint": "eslint . && markdownlint-cli2 \"**/*.md\"",
-    "coverage": "c8 --all --include=index.mjs --include=cli.mjs --include=vocabulary-formatter.mjs --include=front-matter.mjs --include=configuration.mjs --reporter=text --reporter=lcov node --test",
+    "coverage": "c8 --all --include='src/*.mjs' --reporter=text --reporter=lcov node --test",
     "test": "node --test"
   },
   "keywords": [

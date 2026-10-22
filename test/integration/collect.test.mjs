@@ -41,7 +41,7 @@ test("collect excludes suppressed vocabulary candidates", (t) => {
 test("formatter uses normal lint configuration and ignores other rules and excluded files", (t) => {
   const fixture = project(t, "collection-config");
   fixture.write(".markdownlint-cli2.jsonc", JSON.stringify({
-    "customRules": [ new URL("../../index.mjs", import.meta.url).pathname ],
+    "customRules": [ new URL("../../src/index.mjs", import.meta.url).pathname ],
     "ignores": [ "ignored.md" ],
     "fix": true,
     "config": {
@@ -71,5 +71,13 @@ test("collect fails on malformed lint configuration without creating a dictionar
   const result = fixture.collect("*.md");
   assert.notEqual(result.status, 0);
   assert.match(result.stderr, /Unable to parse/u);
+  assert.throws(() => fixture.read(".spellcheck.txt"), /ENOENT/u);
+});
+
+test("collect rejects CLI2 help instead of reporting a successful collection", (t) => {
+  const fixture = project(t, "collect");
+  const result = fixture.command("collect", "--", "--help");
+  assert.equal(result.status, 1, result.stderr);
+  assert.match(result.stderr, /markdownlint-cli2 failed with exit code 2/u);
   assert.throws(() => fixture.read(".spellcheck.txt"), /ENOENT/u);
 });
