@@ -1,3 +1,4 @@
 {
-  "ignores": ["node_modules/**", "coverage/**"]
+  "customRules": ["./index.mjs", "markdownlint-rule-single-line-paragraphs"],
+  "ignores": ["node_modules/**", "coverage/**", "test/fixtures/**"]
 }

@@ -1,10 +1,6 @@
 # markdownlint-rule-spellcheck
 
-[![Test](https://github.com/dblock/markdownlint-rule-spellcheck/actions/workflows/test.yml/badge.svg)](https://github.com/dblock/markdownlint-rule-spellcheck/actions/workflows/test.yml)
-[![Lint](https://github.com/dblock/markdownlint-rule-spellcheck/actions/workflows/lint.yml/badge.svg)](https://github.com/dblock/markdownlint-rule-spellcheck/actions/workflows/lint.yml)
-[![Coverage](https://coveralls.io/repos/github/dblock/markdownlint-rule-spellcheck/badge.svg?branch=main)](https://coveralls.io/github/dblock/markdownlint-rule-spellcheck?branch=main)
-[![Node.js: >=22.18](https://img.shields.io/badge/node-%3E%3D22.18-brightgreen.svg)](https://nodejs.org/)
-[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![Test](https://github.com/dblock/markdownlint-rule-spellcheck/actions/workflows/test.yml/badge.svg)](https://github.com/dblock/markdownlint-rule-spellcheck/actions/workflows/test.yml) [![Lint](https://github.com/dblock/markdownlint-rule-spellcheck/actions/workflows/lint.yml/badge.svg)](https://github.com/dblock/markdownlint-rule-spellcheck/actions/workflows/lint.yml) [![Coverage](https://coveralls.io/repos/github/dblock/markdownlint-rule-spellcheck/badge.svg?branch=main)](https://coveralls.io/github/dblock/markdownlint-rule-spellcheck?branch=main) [![Node.js: >=22.18](https://img.shields.io/badge/node-%3E%3D22.18-brightgreen.svg)](https://nodejs.org/) [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
 A [markdownlint](https://github.com/DavidAnson/markdownlint) custom rule for prose spelling, powered by [CSpell](https://github.com/streetsidesoftware/cspell).
 

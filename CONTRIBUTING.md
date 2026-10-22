@@ -16,4 +16,6 @@ Run `npm run coverage` for unit and integration coverage, including CLI subproce
 
 Run the dictionary collector locally with `node cli.mjs collect "**/*.md" --output .spellcheck.txt`; review candidates before using the generated file.
 
-Linting checks JavaScript with ESLint and Markdown with markdownlint. Markdown paragraphs stay on one source line.
+Linting checks JavaScript with ESLint and Markdown with markdownlint, including `markdownlint-rule-single-line-paragraphs` to keep paragraphs on one source line.
+
+Documentation is also checked with this project's spelling rule. Fix typos; add legitimate project terms to `.spellcheck.txt`. Test fixtures are excluded because they deliberately contain misspellings.
