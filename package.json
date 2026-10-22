@@ -14,7 +14,8 @@
     "front-matter.mjs",
     "configuration.mjs",
     "cli.mjs",
-    "README.md"
+    "README.md",
+    "UPGRADING.md"
   ],
   "scripts": {
     "lint": "eslint . && markdownlint-cli2 \"**/*.md\"",
@@ -46,7 +47,7 @@
     "node": ">=22.18.0"
   },
   "peerDependencies": {
-    "markdownlint": ">=0.41.1"
+    "markdownlint": ">=0.42.0"
   },
   "devDependencies": {
     "@cspell/dict-es-es": "^3.0.9",
@@ -55,7 +56,7 @@
     "c8": "^12.0.0",
     "eslint": "^10.13.0",
     "globals": "^16.5.0",
-    "markdownlint": "0.41.1",
+    "markdownlint": "0.42.0",
     "markdownlint-cli2": "0.24.0",
     "markdownlint-rule-single-line-paragraphs": "^0.2.0"
   },

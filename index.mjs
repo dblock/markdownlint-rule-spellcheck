@@ -264,6 +264,9 @@ export function createRule({ suggestions: includeSuggestions = true } = {}) {
       const suggestionsByWord = new Map();
       const liquid = liquidRanges(params);
       const front = frontMatter(params, markdown.frontMatter);
+      const frontLiquid = front.native ? liquidRanges({
+        "lines": front.lines, "parsers": { "micromark": { "tokens": [] } }
+      }) : liquid;
       const tokens = [
         ...front.tokens,
         ...[ ...proseTokens(params.parsers.micromark.tokens) ].filter((token) => token.startLine > front.endLine)
@@ -288,12 +291,13 @@ export function createRule({ suggestions: includeSuggestions = true } = {}) {
             if (firstPosition) {
               lineNumber = firstPosition.line;
             }
-            const source = params.lines[lineNumber - 1];
+            const source = (token.frontMatter ? front.lines : params.lines)[lineNumber - 1];
             const first = firstPosition ? firstPosition.column - 1 : startColumn - 1 + match.index;
             const last = lastPosition ?
               (lastPosition.line === lineNumber ? lastPosition.column - 1 : source.length) : first + word.length;
-            const offset = liquid.position(lineNumber, first + 1);
-            if (liquid.ranges.some(([ start, end ]) => offset < end && offset + word.length > start)) {
+            const tokenLiquid = token.frontMatter ? frontLiquid : liquid;
+            const offset = tokenLiquid.position(lineNumber, first + 1);
+            if (tokenLiquid.ranges.some(([ start, end ]) => offset < end && offset + word.length > start)) {
               continue;
             }
             // Do not diagnose fragments of entity-encoded words.
@@ -316,6 +320,7 @@ export function createRule({ suggestions: includeSuggestions = true } = {}) {
             }
             onError({
               lineNumber,
+              ...(token.frontMatter && front.native ? { "frontMatter": true } : {}),
               "detail": `Misspelled word: "${word}".${suggestions.length ? ` Suggestions: ${suggestions.join(", ")}.` : ""}`,
               "range": [ first + 1, word.length ],
               ...(token.frontMatter ? { "range": [ first + 1, last - first ], "context": word } : {}),

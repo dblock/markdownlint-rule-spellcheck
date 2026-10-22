@@ -31,3 +31,16 @@ test("collection uses decoded YAML vocabulary with code and body exclusions inta
   assert.equal(fixture.read(".spellcheck.txt"),
     "# Review these candidates: remove typos before using this dictionary.\nhelo\nmispelled\nwrng\n");
 });
+
+test("default Markdown rules do not check YAML header syntax", (t) => {
+  const fixture = project(t, "front-matter");
+  fixture.write(".markdownlint-cli2.jsonc", JSON.stringify({
+    "customRules": [ new URL("../../index.mjs", import.meta.url).pathname ],
+    "config": { "default": true }
+  }));
+  fixture.write("example.md", '---\nlabel: helo\nsummary: "hello"\n---\n\n# Hello\n\nhello\n');
+  const result = fixture.run("example.md");
+  assert.equal(result.status, 1, result.stderr);
+  assert.match(result.stderr, /example\.md:2:8.*spellcheck/u);
+  assert.doesNotMatch(result.stderr, /error MD\d+/u);
+});

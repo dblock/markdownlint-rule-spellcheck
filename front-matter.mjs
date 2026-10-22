@@ -11,23 +11,21 @@ export function frontMatter(params, option) {
       throw new Error(`spellcheck.markdown.frontMatter.${key} must be an array of dotted field paths.`);
     }
   }
-  if (params.frontMatterLines.length) {
-    if (config !== false) {
-      throw new Error('Front matter checking requires "frontMatter": "a^" in .markdownlint-cli2.jsonc (or frontMatter: null in markdownlint API options).');
-    }
-    return { "endLine": 0, "tokens": [] };
+  const native = params.frontMatterLines.length > 0;
+  const lines = native ? params.frontMatterLines : params.lines;
+  const start = lines.findIndex((line) => line.trim() !== "");
+  const empty = { "endLine": 0, "tokens": [], lines, native };
+  if (lines[start]?.replace(/^\uFEFF/u, "") !== "---") {
+    return empty;
   }
-  if (params.lines[0]?.replace(/^\uFEFF/u, "") !== "---") {
-    return { "endLine": 0, "tokens": [] };
-  }
-  const end = params.lines.findIndex((line, index) => index > 0 && /^(?:---|\.\.\.)\s*$/u.test(line));
+  const end = lines.findIndex((line, index) => index > start && /^(?:---|\.\.\.)\s*$/u.test(line));
   if (end < 0) {
     throw new Error("Unterminated YAML front matter.");
   }
   if (config === false) {
-    return { "endLine": end + 1, "tokens": [] };
+    return { ...empty, "endLine": native ? 0 : end + 1 };
   }
-  const source = params.lines.slice(1, end).join("\n");
+  const source = lines.slice(start + 1, end).join("\n");
   const doc = parseDocument(source, { "keepSourceTokens": true, "strict": true });
   if (doc.errors.length || doc.warnings.length) {
     throw new Error(`Invalid YAML front matter: ${(doc.errors[0] || doc.warnings[0]).message}`);
@@ -41,7 +39,7 @@ export function frontMatter(params, option) {
     while (line + 1 < offsets.length && offsets[line + 1] <= offset) {
       line++;
     }
-    return { "line": line + 2, "column": offset - offsets[line] + 1 };
+    return { "line": line + start + 2, "column": offset - offsets[line] + 1 };
   };
   const matches = (paths, path) => paths.some((parent) => path === parent || path.startsWith(`${parent}.`));
   const tokens = [];
@@ -107,5 +105,5 @@ export function frontMatter(params, option) {
     // Aliases are not expanded: anchored values are checked at their definition.
   }
   visit(doc.contents, "");
-  return { "endLine": end + 1, tokens };
+  return { "endLine": native ? 0 : end + 1, tokens, lines, native };
 }

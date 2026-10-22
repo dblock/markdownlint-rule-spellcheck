@@ -13,7 +13,6 @@ import rule, { createRule } from "../index.mjs";
 
 function lintContent(content, config = true) {
   return lint({
-    "frontMatter": null,
     "strings": { content },
     "customRules": [ rule ],
     "config": { "default": false, "spellcheck": config }
@@ -379,16 +378,43 @@ test("front matter can be disabled without changing markdownlint front matter st
   assert.deepEqual(result.source, []);
 });
 
-test("invalid front matter configuration, YAML, and stripped input fail explicitly", () => {
+test("invalid front matter configuration and YAML fail explicitly", () => {
   for (const frontMatter of [ null, [], "yes", { "include": "title" }, { "exclude": [ "" ] }, { "include": [ "a..b" ] } ]) {
     assert.throws(() => lintContent("hello", { "markdown": { frontMatter } }), /frontMatter/u);
   }
   for (const source of [ "---\ntitle: [\n---\n", "---\ntitle: helo\n", "---\na: !unknown helo\n---\n" ]) {
     assert.throws(() => lintContent(source), /YAML front matter/u);
   }
-  assert.throws(() => lint({
-    "strings": { "source": "---\ntitle: helo\n---\nhello\n" },
+});
+
+test("native front matter fixes keep header and body source coordinates separate", () => {
+  const source = '---\ntitle: helo\n---\n\nhelo\n';
+  const errors = lintContent(source, { "autocorrect": true });
+  assert.deepEqual(errors.map(({ lineNumber, errorRange }) => [ lineNumber, errorRange ]),
+    [ [ 2, [ 8, 4 ] ], [ 5, [ 1, 4 ] ] ]);
+  assert.equal(applyFixes(source, errors), source.replaceAll("helo", "hello"));
+});
+
+test("native front matter keeps Liquid coordinates separate and honors file suppression", () => {
+  const source = '---\ntitle: helo\nexpression: "{{ wrng }} helo"\n---\n\nhelo {{ wrng }}\n';
+  assert.deepEqual(lintContent(source).map(({ lineNumber }) => lineNumber), [ 2, 3, 6 ]);
+  const disabledFile = `${source}\n<!-- markdownlint-disable-file spellcheck -->\n`;
+  assert.deepEqual(lintContent(disabledFile), []);
+  const result = lint({
+    "strings": { "source": disabledFile },
     "customRules": [ rule ],
-    "config": { "default": false, "spellcheck": true }
-  }), /frontMatter.*null/u);
+    "config": { "default": false, "spellcheck": true },
+    "noInlineConfig": true
+  });
+  assert.equal(result.source.length, 3);
+});
+
+test("explicitly preserved front matter continues to use full document coordinates", () => {
+  const source = "---\ntitle: helo\n---\n\nhelo\n";
+  const errors = lint({
+    "frontMatter": null, "strings": { source }, "customRules": [ rule ],
+    "config": { "default": false, "spellcheck": { "autocorrect": true } }
+  }).source;
+  assert.deepEqual(errors.map(({ lineNumber }) => lineNumber), [ 2, 5 ]);
+  assert.equal(applyFixes(source, errors), source.replaceAll("helo", "hello"));
 });

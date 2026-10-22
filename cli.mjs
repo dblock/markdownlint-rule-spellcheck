@@ -77,7 +77,6 @@ try {
       for (const file of files) {
         const content = readFileSync(file, "utf8");
         const errors = lint({
-          "frontMatter": null,
           "strings": { content },
           "customRules": [ rule ],
           "config": {
