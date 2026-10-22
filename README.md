@@ -1,6 +1,6 @@
 # markdownlint-rule-spellcheck
 
-[![CI](https://github.com/dblock/markdownlint-rule-spellcheck/actions/workflows/ci.yml/badge.svg)](https://github.com/dblock/markdownlint-rule-spellcheck/actions/workflows/ci.yml)
+[![Test](https://github.com/dblock/markdownlint-rule-spellcheck/actions/workflows/test.yml/badge.svg)](https://github.com/dblock/markdownlint-rule-spellcheck/actions/workflows/test.yml)
 [![Lint](https://github.com/dblock/markdownlint-rule-spellcheck/actions/workflows/lint.yml/badge.svg)](https://github.com/dblock/markdownlint-rule-spellcheck/actions/workflows/lint.yml)
 [![Coverage](https://coveralls.io/repos/github/dblock/markdownlint-rule-spellcheck/badge.svg?branch=main)](https://coveralls.io/github/dblock/markdownlint-rule-spellcheck?branch=main)
 [![Node.js: >=22.18](https://img.shields.io/badge/node-%3E%3D22.18-brightgreen.svg)](https://nodejs.org/)
@@ -59,6 +59,17 @@ example.md:1:7 error spellcheck Prose words should be spelled correctly [Misspel
 
 Spelling checks are enabled by default. Suppress them with `<!-- markdownlint-disable spellcheck -->` or disable `spellcheck` in markdownlint configuration.
 
+To accept project-specific words, collect candidates, review `.spellcheck.txt` and remove typos, then add it to your configuration:
+
+```sh
+npx markdownlint-rule-spellcheck collect "**/*.md" --output .spellcheck.txt
+# Edit .spellcheck.txt: keep only words you want to accept.
+npx markdownlint-rule-spellcheck add ./.spellcheck.txt
+npx markdownlint-cli2 "**/*.md"
+```
+
+`collect` refuses to overwrite an existing file. `add` creates or updates `.markdownlint.json`, preserving existing settings and keeping English unless you have selected other dictionaries. Repeating `add` does not duplicate entries. Use `--config path/to/config.json` to update another JSON configuration; JSONC and YAML are not supported by this command.
+
 ## Configuration
 
 In `.markdownlint.json`:
@@ -66,13 +77,13 @@ In `.markdownlint.json`:
 ```json
 {
   "spellcheck": {
-    "dictionaryFiles": [".spellcheck.txt"],
+    "dictionaries": ["@cspell/dict-en_us", "./.spellcheck.txt"],
     "autocorrect": false
   }
 }
 ```
 
-Both options are optional. `dictionaryFiles` defaults to `[]`; paths are relative to the working directory, not the Markdown file. Each file contains one case-sensitive accepted word per line; blank lines and `#` comments are ignored.
+Both options are optional. Local `.txt` dictionary paths are relative to the working directory, not the Markdown file; use `./.spellcheck.txt` as a project convention. Each file contains one case-sensitive word per line; blank lines and `#` comments are ignored. File dictionaries contribute both accepted words and suggestions, and are reread on each lint invocation. Missing files are errors.
 
 American English is included for offline use. To replace it, install a CSpell dictionary package:
 
@@ -92,7 +103,17 @@ Then configure `.markdownlint.json`:
 
 Omitting `dictionaries` uses American English. An explicit nonempty list replaces it and supplies both accepted words and suggestions. To combine English with technical vocabulary, install `@cspell/dict-software-terms` and use `["@cspell/dict-en_us", "@cspell/dict-software-terms"]`.
 
-Packages are resolved from the working directory; English is included with the rule. Each package must export a JSON configuration with `dictionaryDefinitions` pointing to `.trie` or `.txt` files, optionally gzipped. All definitions in those packages are loaded offline; configuration imports, language settings, and other CSpell configuration are not applied. `dictionaryFiles` still adds accepted project words. Direct Hunspell files and system or personal dictionaries are not supported.
+Packages are resolved from the working directory; English is included with the rule. Each package must export a JSON configuration with `dictionaryDefinitions` pointing to `.trie` or `.txt` files, optionally gzipped. All definitions in those packages are loaded offline; configuration imports, language settings, and other CSpell configuration are not applied. Direct Hunspell files and system or personal dictionaries are not supported.
+
+### Creating a project dictionary
+
+Collect unknown words into a new file, then remove typos before adding it to `dictionaries`:
+
+```sh
+npx markdownlint-rule-spellcheck collect "**/*.md" --output .spellcheck.txt
+```
+
+The command writes sorted, unique candidates and refuses to overwrite an existing file. It uses English by default; repeat `--dictionary` to select packages or existing `.txt` dictionaries. It checks the supplied files with normal Markdown exclusions and suppression comments, but does not load markdownlint configuration. Normal linting never creates or updates dictionaries.
 
 ## Corrections
 
@@ -104,4 +125,4 @@ For example, `helo` becomes `hello`. Only the first suggestion is considered, an
 
 Checks spelling, not grammar, in headings, paragraphs, lists, quotes, tables, link labels, and image descriptions.
 
-Skips code, HTML blocks and tags, front matter, link destinations/titles/reference definitions, URLs, email addresses, and entity-encoded word fragments. Does not split identifiers; add project terms through `dictionaryFiles` or install technical dictionaries.
+Skips code, HTML blocks and tags, front matter, link destinations/titles/reference definitions, URLs, email addresses, and entity-encoded word fragments. Does not split identifiers; add project terms through `.txt` dictionaries or install technical dictionaries.

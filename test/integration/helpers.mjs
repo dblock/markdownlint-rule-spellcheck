@@ -20,11 +20,16 @@ export function project(t, name, config = {}) {
     "config": { "default": false, "spellcheck": config }
   }));
   return {
+    "write": (name, text) => writeFileSync(join(dir, name), text),
     "read": (name) => readFileSync(join(dir, name), "utf8"),
-    "run": (...args) => {
-      const result = spawnSync(process.execPath, [ cli, ...args ], { "cwd": dir, "encoding": "utf8" });
-      assert.ifError(result.error);
-      return result;
-    }
+    "run": (...args) => run(cli, args),
+    "collect": (...args) => run(fileURLToPath(new URL("../../cli.mjs", import.meta.url)), [ "collect", ...args ]),
+    "add": (...args) => run(fileURLToPath(new URL("../../cli.mjs", import.meta.url)), [ "add", ...args ]),
+    "command": (...args) => run(fileURLToPath(new URL("../../cli.mjs", import.meta.url)), args)
   };
+  function run(entryPoint, args) {
+    const result = spawnSync(process.execPath, [ entryPoint, ...args ], { "cwd": dir, "encoding": "utf8" });
+    assert.ifError(result.error);
+    return result;
+  }
 }

@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
@@ -102,11 +102,26 @@ test("loads explicit case-sensitive vocabulary alongside English and rereads cha
   try {
     const path = join(dir, "words.txt");
     writeFileSync(path, "# Project vocabulary\n\nmispelled\nZqxvterm\n");
-    const config = { "dictionaryFiles": [ path ] };
+    const config = { "dictionaries": [ "@cspell/dict-en_us", path ] };
     assert.deepEqual(words("hello mispelled Zqxvterm zqxvterm", config), [ "zqxvterm" ]);
     writeFileSync(path, "Zqxvterm\n");
     assert.deepEqual(words("mispelled", config), [ "mispelled" ]);
     assert.deepEqual(words("Zqxvterm"), [ "Zqxvterm" ], "vocabulary does not leak across configurations");
+  } finally {
+    rmSync(dir, { "recursive": true });
+  }
+});
+
+test("local text dictionaries supply suggestions and replace English when used alone", () => {
+  const dir = mkdtempSync(join(tmpdir(), "spellcheck-local-"));
+  try {
+    const path = join(dir, ".spellcheck.txt");
+    writeFileSync(path, "# Project vocabulary\nzqxvterm\n");
+    const config = { "dictionaries": [ path ], "autocorrect": true };
+    assert.deepEqual(words("zqxvterm hello", config), [ "hello" ]);
+    assert.equal(applyFixes("zqxvter", lintContent("zqxvter", config)), "zqxvterm");
+    writeFileSync(path, "another\n");
+    assert.deepEqual(words("zqxvterm", config), [ "zqxvterm" ]);
   } finally {
     rmSync(dir, { "recursive": true });
   }
@@ -122,9 +137,9 @@ test("surfaces invalid configuration and missing or malformed dictionary files",
   const dir = mkdtempSync(join(tmpdir(), "markdownlint-spellcheck-"));
   try {
     const path = join(dir, "words.txt");
-    assert.throws(() => lintContent("helo", { "dictionaryFiles": [ path ] }), /ENOENT/u);
+    assert.throws(() => lintContent("helo", { "dictionaries": [ "@cspell/dict-en_us", path ] }), /ENOENT/u);
     writeFileSync(path, "two words\n");
-    assert.throws(() => lintContent("helo", { "dictionaryFiles": [ path ] }), /Invalid vocabulary word/u);
+    assert.throws(() => lintContent("helo", { "dictionaries": [ "@cspell/dict-en_us", path ] }), /Invalid vocabulary word/u);
   } finally {
     rmSync(dir, { "recursive": true });
   }
@@ -150,6 +165,55 @@ test("combined dictionaries preserve English suggestion weights and add technica
   assert.equal(applyFixes("helo", lintContent("helo", config)), "hello");
   const errors = lintContent("webpak", config);
   assert.match(errors[0].errorDetail, /webpack/u);
+});
+
+test("rejects malformed dictionary packages before checking prose", () => {
+  const cwd = process.cwd();
+  const dir = mkdtempSync(join(tmpdir(), "spellcheck-packages-"));
+  try {
+    const path = join(dir, "node_modules", "test-dictionary");
+    mkdirSync(path, { "recursive": true });
+    writeFileSync(join(path, "package.json"), '{"main":"dictionary.json"}');
+    process.chdir(dir);
+    const config = { "dictionaries": [ "test-dictionary" ] };
+    for (const [ definition, message ] of [
+      [ {}, /No dictionary definitions/u ],
+      [ { "dictionaryDefinitions": [] }, /No dictionary definitions/u ],
+      [ { "dictionaryDefinitions": [ null ] }, /Invalid dictionary definition/u ],
+      [ { "dictionaryDefinitions": [ { "name": "test" } ] }, /Invalid dictionary definition/u ],
+      [ { "dictionaryDefinitions": [ { "name": "test", "path": "words.aff" } ] }, /Unsupported dictionary format/u ]
+    ]) {
+      writeFileSync(join(path, "dictionary.json"), JSON.stringify(definition));
+      assert.throws(() => lintContent("helo", config), message);
+    }
+    assert.throws(() => lintContent("helo", { "dictionaries": [ "." ] }), /Invalid dictionary package name/u);
+  } finally {
+    process.chdir(cwd);
+    rmSync(dir, { "recursive": true });
+  }
+});
+
+test("local dictionary fixes cover edit types but reject multi-edit suggestions", () => {
+  const dir = mkdtempSync(join(tmpdir(), "spellcheck-edits-"));
+  try {
+    const path = join(dir, "words.txt");
+    const config = { "dictionaries": [ path ], "autocorrect": true };
+    for (const [ target, source, fixed ] of [
+      [ "cat", "cta", "cat" ],
+      [ "cat", "cot", "cat" ],
+      [ "cat", "cart", "cat" ],
+      [ "kitten", "kiten", "kitten" ],
+      [ "kitten", "kitt", "kitt" ],
+      [ "kitten", "kittan", "kitten" ]
+    ]) {
+      writeFileSync(path, `${target}\n`);
+      assert.equal(applyFixes(source, lintContent(source, config)), fixed);
+    }
+    writeFileSync(path, "cat\n");
+    assert.deepEqual(words("wrng&#108;o &amp; wrng", config), [ "wrng" ]);
+  } finally {
+    rmSync(dir, { "recursive": true });
+  }
 });
 
 test("respects native markdownlint suppression comments", () => {
