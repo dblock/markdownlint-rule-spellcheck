@@ -1,0 +1,19 @@
+# Accepted project vocabulary.
+Autocorrection
+CLI
+CSpell
+Changelog
+CommonJS
+ESLint
+ESM
+JSON
+JSONC
+YAML
+dblock
+gzipped
+js
+markdownlint
+markdownlint's
+micromark
+reparse
+subprocesses

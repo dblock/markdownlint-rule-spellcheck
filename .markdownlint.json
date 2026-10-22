@@ -1,3 +1,6 @@
 {
-  "MD013": false
+  "MD013": false,
+  "spellcheck": {
+    "dictionaries": ["@cspell/dict-en_us", "./.spellcheck.txt"]
+  }
 }

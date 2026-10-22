@@ -54,7 +54,8 @@
     "eslint": "^10.13.0",
     "globals": "^16.5.0",
     "markdownlint": "0.41.1",
-    "markdownlint-cli2": "0.24.0"
+    "markdownlint-cli2": "0.24.0",
+    "markdownlint-rule-single-line-paragraphs": "^0.2.0"
   },
   "dependencies": {
     "@cspell/dict-en_us": "^4.4.43",

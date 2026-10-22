@@ -2,6 +2,7 @@
 
 ## (Next)
 
+* [#6](https://github.com/dblock/markdownlint-rule-spellcheck/pull/6): Spellcheck the project's own documentation and enforce single-line paragraphs in the lint workflow — [@dblock](https://github.com/dblock).
 * [#5](https://github.com/dblock/markdownlint-rule-spellcheck/pull/5): Unify local word files and packages under `dictionaries` (replacing `dictionaryFiles`) and add explicit `collect` and `add` commands for project dictionaries — [@dblock](https://github.com/dblock).
 * [#4](https://github.com/dblock/markdownlint-rule-spellcheck/pull/4): Support selecting installed CSpell language and technical dictionaries for checks and suggestions — [@dblock](https://github.com/dblock).
 * [#3](https://github.com/dblock/markdownlint-rule-spellcheck/pull/3): Publish coverage to Coveralls and expand CLI integration tests — [@dblock](https://github.com/dblock).
