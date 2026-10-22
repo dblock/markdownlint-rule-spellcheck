@@ -47,7 +47,7 @@ npm pack
 tar -tzf markdownlint-rule-spellcheck-0.1.0.tgz
 ```
 
-Confirm it contains `package.json`, `README.md`, `CHANGELOG.md`, `LICENSE`, `index.mjs`, `configuration.mjs`, `front-matter.mjs`, and executable `cli.mjs`, without tests, coverage reports, local vocabulary, or development artifacts. Runtime dependencies, including bundled English, are installed through `npm` rather than copied into the archive.
+Confirm it contains `package.json`, `README.md`, `UPGRADING.md`, `CHANGELOG.md`, `LICENSE`, and the runtime modules in `src/`, including executable `src/cli.mjs`, without tests, coverage reports, local vocabulary, or development artifacts. Runtime dependencies, including bundled English, are installed through `npm` rather than copied into the archive.
 
 Install this exact archive alongside `markdownlint-cli2` in a separate temporary project. Follow the [usage instructions](README.md#usage) and confirm that `helo` produces a spelling diagnostic and becomes `hello` only with `autocorrect: true` and `--fix`. Also check front matter, local dictionaries, the packaged candidate formatter, and the `add` command. Do not use a source checkout or local dependency links for this check.
 

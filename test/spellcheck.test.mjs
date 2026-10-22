@@ -9,7 +9,7 @@ import { createSpellingDictionaryFromTrieFile } from "cspell-dictionary";
 import test from "node:test";
 import { applyFixes } from "markdownlint";
 import { lint } from "markdownlint/sync";
-import rule, { createRule } from "../index.mjs";
+import rule, { createRule } from "../src/index.mjs";
 
 function lintContent(content, config = true) {
   return lint({
@@ -289,6 +289,36 @@ test("rejects malformed dictionary packages before checking prose", () => {
   }
 });
 
+test("combined dictionaries exclude forbidden and no-suggest replacements", () => {
+  const cwd = process.cwd();
+  const dir = mkdtempSync(join(tmpdir(), "spellcheck-restricted-suggestions-"));
+  try {
+    const path = join(dir, "node_modules", "restricted-dictionary");
+    mkdirSync(path, { "recursive": true });
+    writeFileSync(join(path, "package.json"), '{"main":"dictionary.json"}');
+    writeFileSync(join(path, "dictionary.json"), JSON.stringify({
+      "dictionaryDefinitions": [
+        { "name": "candidates", "path": "candidates.txt" },
+        { "name": "forbidden", "path": "forbidden.txt" },
+        { "name": "ignored", "path": "ignored.txt", "noSuggest": true }
+      ]
+    }));
+    writeFileSync(join(path, "candidates.txt"), "cat\ncut\ncoat\n");
+    writeFileSync(join(path, "forbidden.txt"), "!cat\n");
+    writeFileSync(join(path, "ignored.txt"), "cut\n");
+    process.chdir(dir);
+    const config = { "dictionaries": { "en": [ "restricted-dictionary" ] }, "autocorrect": true };
+    const errors = lintContent("cot", config);
+    assert.equal(errors[0].errorDetail, 'Misspelled word: "cot". Suggestions: coat.');
+    assert.equal(applyFixes("cot", errors), "coat");
+    assert.deepEqual(lintContent("cut", config), []);
+    assert.equal(lintContent("cat", config).length, 1);
+  } finally {
+    process.chdir(cwd);
+    rmSync(dir, { "recursive": true });
+  }
+});
+
 test("local dictionary fixes cover edit types but reject multi-edit suggestions", () => {
   const dir = mkdtempSync(join(tmpdir(), "spellcheck-edits-"));
   try {
@@ -384,6 +414,10 @@ test("invalid front matter configuration and YAML fail explicitly", () => {
   }
   for (const source of [ "---\ntitle: [\n---\n", "---\ntitle: helo\n", "---\na: !unknown helo\n---\n" ]) {
     assert.throws(() => lintContent(source), /YAML front matter/u);
+  }
+  for (const key of [ "42", "true", "[title, description]" ]) {
+    assert.throws(() => lintContent(`---\n${key}: helo\n---\n`),
+      /YAML front matter field names must be strings/u);
   }
 });
 
