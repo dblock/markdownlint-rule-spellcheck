@@ -16,8 +16,8 @@ const excludedTypes = new Set([
   "reference",
   "resource"
 ]);
-const wordPattern = /(?<![\p{L}\p{M}\p{N}_])[\p{L}\p{M}]+(?:['’][\p{L}\p{M}]+)*(?![\p{L}\p{M}\p{N}_])/gu;
-const wordOnly = /^[\p{L}\p{M}]+(?:['’][\p{L}\p{M}]+)*$/u;
+const wordPattern = /[\p{L}\p{M}\p{N}\p{Pc}]+(?:['’][\p{L}\p{M}\p{N}\p{Pc}]+)*/gu;
+const wordOnly = /^\p{L}[\p{L}\p{M}]*(?:['’]\p{L}[\p{L}\p{M}]*)*$/u;
 const nonProsePattern = /(?:https?:\/\/|mailto:|www\.)[^\s<>]+|[\p{L}\p{N}_.+-]+@[\p{L}\p{N}_.-]+/giu;
 const dictionaryCache = new Map();
 const suggestionCache = new WeakMap();
@@ -122,7 +122,7 @@ function readVocabulary(file) {
   return words;
 }
 
-function* proseTokens(tokens) {
+function* dataTokens(tokens) {
   for (const token of tokens) {
     if (excludedTypes.has(token.type)) {
       continue;
@@ -130,14 +130,32 @@ function* proseTokens(tokens) {
     if (token.type === "data") {
       yield token;
     } else {
-      yield* proseTokens(token.children || []);
+      yield* dataTokens(token.children || []);
     }
+
+  }
+}
+
+function* proseTokens(tokens) {
+  let previous;
+  for (const token of dataTokens(tokens)) {
+    if (previous && previous.endLine === token.startLine && previous.endColumn === token.startColumn) {
+      previous = { ...previous, "text": previous.text + token.text, "endLine": token.endLine, "endColumn": token.endColumn };
+    } else {
+      if (previous) {
+        yield previous;
+      }
+      previous = token;
+    }
+  }
+  if (previous) {
+    yield previous;
   }
 }
 
 function standalone(line, first, last) {
-  return !/[\p{L}\p{M}\p{N}_](?:[.-])?$/u.test(line.slice(0, first)) &&
-    !/^(?:[.-])?[\p{L}\p{M}\p{N}_]/u.test(line.slice(last));
+  return !/[\p{L}\p{M}\p{N}\p{Pc}](?:[.-])?$/u.test(line.slice(0, first)) &&
+    !/^(?:[.-])?[\p{L}\p{M}\p{N}\p{Pc}]/u.test(line.slice(last));
 }
 
 // One insertion, deletion, substitution, or adjacent transposition; CSpell's weighted
@@ -205,7 +223,7 @@ export function createRule({ suggestions: includeSuggestions = true } = {}) {
           const source = params.lines[lineNumber - 1];
           for (const match of line.matchAll(wordPattern)) {
             const word = match[0];
-            if (correct(word)) {
+            if (!wordOnly.test(word) || correct(word)) {
               continue;
             }
             const first = startColumn - 1 + match.index;
