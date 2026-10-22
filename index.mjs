@@ -153,6 +153,53 @@ function* proseTokens(tokens) {
   }
 }
 
+function liquidRanges(params) {
+  const offsets = [];
+  let offset = 0;
+  for (const line of params.lines) {
+    offsets.push(offset);
+    offset += line.length + 1;
+  }
+  const position = (line, column) => offsets[line - 1] + column - 1;
+  const code = [];
+  function visit(tokens) {
+    for (const token of tokens) {
+      if ([ "codeFenced", "codeIndented", "codeText" ].includes(token.type)) {
+        code.push([ position(token.startLine, token.startColumn), position(token.endLine, token.endColumn) ]);
+      } else {
+        visit(token.children || []);
+      }
+    }
+  }
+  visit(params.parsers.micromark.tokens);
+  const source = params.lines.join("\n");
+  const ranges = [];
+  const opener = /\{\{|\{%/gu;
+  let cursor = 0;
+  while (cursor < source.length) {
+    opener.lastIndex = cursor;
+    const match = opener.exec(source);
+    if (!match) {
+      break;
+    }
+    const start = match.index;
+    const containingCode = code.find(([ first, last ]) => first <= start && start < last);
+    if (containingCode) {
+      cursor = containingCode[1];
+      continue;
+    }
+    const closing = match[0] === "{{" ? "}}" : "%}";
+    const end = source.indexOf(closing, start + 2);
+    if (end === -1) {
+      cursor = start + 2;
+    } else {
+      ranges.push([ start, end + 2 ]);
+      cursor = end + 2;
+    }
+  }
+  return { ranges, position };
+}
+
 function standalone(line, first, last) {
   return !/[\p{L}\p{M}\p{N}\p{Pc}](?:[.-])?$/u.test(line.slice(0, first)) &&
     !/^(?:[.-])?[\p{L}\p{M}\p{N}\p{Pc}]/u.test(line.slice(last));
@@ -214,6 +261,7 @@ export function createRule({ suggestions: includeSuggestions = true } = {}) {
       const dictionary = getDictionaries(config.dictionaries === undefined ? [ "@cspell/dict-en_us" ] : config.dictionaries);
       const correct = (word) => dictionary.has(word, { "ignoreCase": false });
       const suggestionsByWord = new Map();
+      const liquid = liquidRanges(params);
       for (const token of proseTokens(params.parsers.micromark.tokens)) {
         const text = token.text.replace(nonProsePattern, (match) => " ".repeat(match.length));
         const lines = text.split(/\r\n|\r|\n/u);
@@ -228,6 +276,10 @@ export function createRule({ suggestions: includeSuggestions = true } = {}) {
             }
             const first = startColumn - 1 + match.index;
             const last = first + word.length;
+            const offset = liquid.position(lineNumber, first + 1);
+            if (liquid.ranges.some(([ start, end ]) => offset < end && offset + word.length > start)) {
+              continue;
+            }
             // Do not diagnose fragments of entity-encoded words.
             if (/&(?:#x[\da-f]+|#\d+|[a-z][\da-z]+);$/iu.test(source.slice(0, first)) ||
                 /^&(?:#x[\da-f]+|#\d+|[a-z][\da-z]+);/iu.test(source.slice(last))) {

@@ -2,6 +2,7 @@
 
 ## (Next)
 
+* [#10](https://github.com/dblock/markdownlint-rule-spellcheck/pull/10): Exclude Liquid expressions and tags from Markdown spelling, fixes, and vocabulary collection — [@dblock](https://github.com/dblock).
 * [#9](https://github.com/dblock/markdownlint-rule-spellcheck/pull/9): Preserve Unicode prose words and skip whole numeric and connector-punctuation tokens — [@dblock](https://github.com/dblock).
 * [#8](https://github.com/dblock/markdownlint-rule-spellcheck/pull/8): Reduce configuration command startup, reuse bounded dictionary suggestions across files, and cancel superseded PR workflow runs — [@dblock](https://github.com/dblock).
 * [#7](https://github.com/dblock/markdownlint-rule-spellcheck/pull/7): Speed up vocabulary collection by skipping suggestions and exclude suppressed words from candidates — [@dblock](https://github.com/dblock).

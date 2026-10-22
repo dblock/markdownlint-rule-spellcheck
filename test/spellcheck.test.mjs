@@ -152,6 +152,23 @@ test("skips whole numeric and connector tokens and preserves apostrophe and acce
   assert.deepEqual(lintContent("can't can’t world's world’s"), []);
 });
 
+test("Liquid ranges cross Markdown tokens and CRLF while preserving visible UTF-16 columns", () => {
+  const source = "# 😀 {{ **hiddenwrng**\r\nhiddenwrng }}\thelo {% hiddenwrng %} helo\r\n";
+  const errors = lintContent(source, { "autocorrect": true });
+  assert.deepEqual(errors.map(({ lineNumber, errorRange }) => [ lineNumber, errorRange ]),
+    [ [ 2, [ 15, 4 ] ], [ 2, [ 37, 4 ] ] ]);
+  assert.equal(applyFixes(source, errors), source.replaceAll("helo", "hello"));
+});
+
+test("Liquid ends at its first matching delimiter and leaves unmatched openers literal", () => {
+  assert.deepEqual(words("{{ hiddenwrng }} helo {% hiddenwrng %} helo {{ unmatchedwrng"),
+    [ "helo", "helo", "unmatchedwrng" ]);
+  assert.deepEqual(words("`{{` helo }} {% unmatchedwrng"),
+    [ "helo", "unmatchedwrng" ]);
+  assert.deepEqual(words("{{ hiddenwrng }} helo {{ hiddenwrng }} helo"),
+    [ "helo", "helo" ]);
+});
+
 test("loads explicit case-sensitive vocabulary alongside English and rereads changed files", () => {
   const dir = mkdtempSync(join(tmpdir(), "markdownlint-spellcheck-"));
   try {
