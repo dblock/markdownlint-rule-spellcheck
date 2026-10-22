@@ -113,6 +113,9 @@ test("loads explicit case-sensitive vocabulary alongside English and rereads cha
 });
 
 test("surfaces invalid configuration and missing or malformed dictionary files", () => {
+  for (const dictionaries of [ null, [], "english", [ "" ], [ "../dictionary" ] ]) {
+    assert.throws(() => lintContent("helo", { dictionaries }), /spellcheck.dictionaries/u);
+  }
   assert.throws(() => lintContent("helo", { "dictionaryFiles": "words.txt" }), /dictionaryFiles/u);
   assert.throws(() => lintContent("helo", { "dictionaryFiles": null }), /dictionaryFiles/u);
   assert.throws(() => lintContent("helo", { "autocorrect": "yes" }), /autocorrect/u);
@@ -125,6 +128,28 @@ test("surfaces invalid configuration and missing or malformed dictionary files",
   } finally {
     rmSync(dir, { "recursive": true });
   }
+});
+
+test("selected dictionaries replace English without leaking between invocations", () => {
+  const spanish = { "dictionaries": [ "@cspell/dict-es-es" ] };
+  assert.deepEqual(words("hola mundo", spanish), []);
+  assert.deepEqual(words("hello", spanish), [ "hello" ]);
+  assert.deepEqual(words("hello"), []);
+  assert.deepEqual(words("mundo"), [ "mundo" ]);
+  const errors = lintContent("holaa", { ...spanish, "autocorrect": true });
+  assert.match(errors[0].errorDetail, /Suggestions:/u);
+  assert.equal(applyFixes("holaa", errors), "hola");
+});
+
+test("combined dictionaries preserve English suggestion weights and add technical suggestions", () => {
+  const config = {
+    "dictionaries": [ "@cspell/dict-en_us", "@cspell/dict-software-terms" ],
+    "autocorrect": true
+  };
+  assert.deepEqual(words("hello webpack", config), []);
+  assert.equal(applyFixes("helo", lintContent("helo", config)), "hello");
+  const errors = lintContent("webpak", config);
+  assert.match(errors[0].errorDetail, /webpack/u);
 });
 
 test("respects native markdownlint suppression comments", () => {

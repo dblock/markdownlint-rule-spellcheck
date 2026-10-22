@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { cpSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { cpSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -12,6 +12,7 @@ export function project(t, name, config = {}) {
   const dir = mkdtempSync(join(tmpdir(), "spellcheck-integration-"));
   t.after(() => rmSync(dir, { "recursive": true }));
   cpSync(new URL(`${name}/`, fixtures), dir, { "recursive": true });
+  symlinkSync(fileURLToPath(new URL("../../node_modules/", import.meta.url)), join(dir, "node_modules"), "dir");
   const entry = fileURLToPath(new URL("../../index.mjs", import.meta.url));
   const cli = fileURLToPath(new URL("../../node_modules/markdownlint-cli2/markdownlint-cli2-bin.mjs", import.meta.url));
   writeFileSync(join(dir, ".markdownlint-cli2.jsonc"), JSON.stringify({
