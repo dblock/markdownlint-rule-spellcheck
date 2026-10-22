@@ -1,0 +1,51 @@
+{
+  "name": "markdownlint-rule-spellcheck",
+  "version": "0.1.0",
+  "description": "A markdownlint custom rule for spelling checks powered by CSpell.",
+  "type": "module",
+  "main": "index.mjs",
+  "exports": "./index.mjs",
+  "files": [
+    "CHANGELOG.md",
+    "index.mjs",
+    "README.md"
+  ],
+  "scripts": {
+    "test": "node --test"
+  },
+  "keywords": [
+    "markdownlint-rule",
+    "markdownlint",
+    "markdown",
+    "spellcheck",
+    "cspell"
+  ],
+  "author": "Daniel Doubrovkine",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/dblock/markdownlint-rule-spellcheck.git"
+  },
+  "bugs": {
+    "url": "https://github.com/dblock/markdownlint-rule-spellcheck/issues"
+  },
+  "homepage": "https://github.com/dblock/markdownlint-rule-spellcheck#readme",
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org"
+  },
+  "engines": {
+    "node": ">=22.18.0"
+  },
+  "peerDependencies": {
+    "markdownlint": ">=0.41.1"
+  },
+  "devDependencies": {
+    "markdownlint": "0.41.1",
+    "markdownlint-cli2": "0.24.0"
+  },
+  "dependencies": {
+    "@cspell/dict-en_us": "^4.4.43",
+    "cspell-dictionary": "^10.4.0"
+  }
+}
