@@ -9,7 +9,7 @@ test("collect then add creates an English-plus-project configuration without dup
   assert.equal(result.status, 0, result.stderr);
   const config = fixture.read(".markdownlint.json");
   assert.deepEqual(JSON.parse(config), {
-    "spellcheck": { "dictionaries": [ "@cspell/dict-en_us", "./.spellcheck.txt" ] }
+    "spellcheck": { "dictionaries": { "en": [ "@cspell/dict-en_us", "./.spellcheck.txt" ] } }
   });
   assert.equal(fixture.add(".spellcheck.txt").status, 0);
   assert.equal(fixture.read(".markdownlint.json"), config);
@@ -21,14 +21,33 @@ test("add preserves other settings and selected languages", (t) => {
   const fixture = project(t, "vocabulary");
   fixture.write("custom.json", JSON.stringify({
     "MD013": false,
-    "spellcheck": { "dictionaries": [ "@cspell/dict-es-es" ], "autocorrect": true }
+    "spellcheck": {
+      "dictionaries": { "es": [ "@cspell/dict-es-es" ] },
+      "autocorrect": true, "markdown": { "frontMatter": false }
+    }
   }));
-  const result = fixture.add("./words.txt", "--config", "custom.json");
+  const result = fixture.add("./words.txt", "--config", "custom.json", "--language", "es");
   assert.equal(result.status, 0, result.stderr);
   assert.deepEqual(JSON.parse(fixture.read("custom.json")), {
     "MD013": false,
-    "spellcheck": { "dictionaries": [ "@cspell/dict-es-es", "./words.txt" ], "autocorrect": true }
+    "spellcheck": {
+      "dictionaries": { "es": [ "@cspell/dict-es-es", "./words.txt" ] },
+      "autocorrect": true, "markdown": { "frontMatter": false }
+    }
   });
+});
+
+test("add places new vocabulary in the selected language without inventing a language dictionary", (t) => {
+  const fixture = project(t, "vocabulary");
+  const result = fixture.add("./words.txt", "--language", "es");
+  assert.equal(result.status, 0, result.stderr);
+  const config = fixture.read(".markdownlint.json");
+  assert.deepEqual(JSON.parse(config).spellcheck.dictionaries, {
+    "en": [ "@cspell/dict-en_us" ], "es": [ "./words.txt" ]
+  });
+  assert.equal(fixture.add("./words.txt", "--language", "es").status, 0);
+  assert.equal(fixture.read(".markdownlint.json"), config);
+  assert.equal(fixture.add("./words.txt", "--language", "").status, 1);
 });
 
 test("add rejects missing files, disabled spelling, and invalid JSON without overwriting settings", (t) => {
@@ -38,7 +57,8 @@ test("add rejects missing files, disabled spelling, and invalid JSON without ove
   for (const original of [ "{", "[]", '{"spellcheck":false}', '{"spellcheck":{"enabled":false}}',
     '{"spellcheck":"yes"}', '{"spellcheck":{"dictionaryFiles":[]}}',
     '{"spellcheck":{"dictionaries":null}}', '{"spellcheck":{"dictionaries":[]}}',
-    '{"spellcheck":{"dictionaries":[null]}}' ]) {
+    '{"spellcheck":{"dictionaries":[null]}}', '{"spellcheck":{"frontMatter":false}}',
+    '{"spellcheck":{"markdown":false}}', '{"spellcheck":{"dictionaries":["@cspell/dict-en_us"]}}' ]) {
     fixture.write(".markdownlint.json", original);
     const result = fixture.add("./words.txt");
     assert.equal(result.status, 1);

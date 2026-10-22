@@ -59,7 +59,7 @@ test("local dictionary edits invalidate suggestions as well as accepted words", 
   const dir = mkdtempSync(join(tmpdir(), "spellcheck-fresh-suggestions-"));
   try {
     const path = join(dir, "words.txt");
-    const config = { "dictionaries": [ path ], "autocorrect": true };
+    const config = { "dictionaries": { "en": [ path ] }, "autocorrect": true };
     writeFileSync(path, "cat\n");
     assert.equal(applyFixes("cot", lintContent("cot", config)), "cat");
     writeFileSync(path, "cut\n");
@@ -95,7 +95,7 @@ test("skips code, HTML blocks, disabled front matter, URLs, emails, link destina
     "[hello](wrng.md \"wrng\") [hello][wrng]", "",
     "[wrng]: wrng.md \"wrng\""
   ].join("\n");
-  assert.deepEqual(lintContent(source, { "frontMatter": false }), []);
+  assert.deepEqual(lintContent(source, { "markdown": { "frontMatter": false } }), []);
 });
 
 test("preserves UTF-16 ranges after Unicode, tabs, inline markup, and CRLF", () => {
@@ -175,7 +175,7 @@ test("loads explicit case-sensitive vocabulary alongside English and rereads cha
   try {
     const path = join(dir, "words.txt");
     writeFileSync(path, "# Project vocabulary\n\nmispelled\nZqxvterm\n");
-    const config = { "dictionaries": [ "@cspell/dict-en_us", path ] };
+    const config = { "dictionaries": { "en": [ "@cspell/dict-en_us", path ] } };
     assert.deepEqual(words("hello mispelled Zqxvterm zqxvterm", config), [ "zqxvterm" ]);
     writeFileSync(path, "Zqxvterm\n");
     assert.deepEqual(words("mispelled", config), [ "mispelled" ]);
@@ -190,7 +190,7 @@ test("local text dictionaries supply suggestions and replace English when used a
   try {
     const path = join(dir, ".spellcheck.txt");
     writeFileSync(path, "# Project vocabulary\nzqxvterm\n");
-    const config = { "dictionaries": [ path ], "autocorrect": true };
+    const config = { "dictionaries": { "en": [ path ] }, "autocorrect": true };
     assert.deepEqual(words("zqxvterm hello", config), [ "hello" ]);
     assert.equal(applyFixes("zqxvter", lintContent("zqxvter", config)), "zqxvterm");
     writeFileSync(path, "another\n");
@@ -201,7 +201,9 @@ test("local text dictionaries supply suggestions and replace English when used a
 });
 
 test("surfaces invalid configuration and missing or malformed dictionary files", () => {
-  for (const dictionaries of [ null, [], "english", [ "" ], [ "../dictionary" ] ]) {
+  for (const dictionaries of [ null, [], "english", [ "" ], [ "../dictionary" ], {},
+    { "": [ "@cspell/dict-en_us" ] }, { "en": [] }, { "en": "english" },
+    { "en": [ null ] }, { "en": [ "" ] }, { "en": [ "../dictionary" ] } ]) {
     assert.throws(() => lintContent("helo", { dictionaries }), /spellcheck.dictionaries/u);
   }
   assert.throws(() => lintContent("helo", { "dictionaryFiles": "words.txt" }), /dictionaryFiles/u);
@@ -210,16 +212,16 @@ test("surfaces invalid configuration and missing or malformed dictionary files",
   const dir = mkdtempSync(join(tmpdir(), "markdownlint-spellcheck-"));
   try {
     const path = join(dir, "words.txt");
-    assert.throws(() => lintContent("helo", { "dictionaries": [ "@cspell/dict-en_us", path ] }), /ENOENT/u);
+    assert.throws(() => lintContent("helo", { "dictionaries": { "en": [ "@cspell/dict-en_us", path ] } }), /ENOENT/u);
     writeFileSync(path, "two words\n");
-    assert.throws(() => lintContent("helo", { "dictionaries": [ "@cspell/dict-en_us", path ] }), /Invalid vocabulary word/u);
+    assert.throws(() => lintContent("helo", { "dictionaries": { "en": [ "@cspell/dict-en_us", path ] } }), /Invalid vocabulary word/u);
   } finally {
     rmSync(dir, { "recursive": true });
   }
 });
 
 test("selected dictionaries replace English without leaking between invocations", () => {
-  const spanish = { "dictionaries": [ "@cspell/dict-es-es" ] };
+  const spanish = { "dictionaries": { "es": [ "@cspell/dict-es-es" ] } };
   assert.deepEqual(words("hola mundo", spanish), []);
   assert.deepEqual(words("hello", spanish), [ "hello" ]);
   assert.deepEqual(words("hello"), []);
@@ -229,9 +231,31 @@ test("selected dictionaries replace English without leaking between invocations"
   assert.equal(applyFixes("holaa", errors), "hola");
 });
 
+test("language dictionaries combine without implicitly loading English", () => {
+  const spanish = { "dictionaries": { "es": [ "@cspell/dict-es-es" ] } };
+  assert.deepEqual(words("hello mundo", spanish), [ "hello" ]);
+  const combined = {
+    "dictionaries": {
+      "en": [ "@cspell/dict-en_us" ],
+      "es": [ "@cspell/dict-es-es" ]
+    }
+  };
+  assert.deepEqual(words("hello mundo", combined), []);
+  assert.equal(applyFixes("holaa", lintContent("holaa", {
+    ...combined, "autocorrect": true
+  })), "hola");
+});
+
+test("rejects old front matter placement and invalid Markdown settings", () => {
+  assert.throws(() => lintContent("hello", { "frontMatter": false }), /markdown.frontMatter/u);
+  for (const markdown of [ null, false, true, [], "markdown" ]) {
+    assert.throws(() => lintContent("hello", { markdown }), /spellcheck.markdown/u);
+  }
+});
+
 test("combined dictionaries preserve English suggestion weights and add technical suggestions", () => {
   const config = {
-    "dictionaries": [ "@cspell/dict-en_us", "@cspell/dict-software-terms" ],
+    "dictionaries": { "en": [ "@cspell/dict-en_us", "@cspell/dict-software-terms" ] },
     "autocorrect": true
   };
   assert.deepEqual(words("hello webpack", config), []);
@@ -248,7 +272,7 @@ test("rejects malformed dictionary packages before checking prose", () => {
     mkdirSync(path, { "recursive": true });
     writeFileSync(join(path, "package.json"), '{"main":"dictionary.json"}');
     process.chdir(dir);
-    const config = { "dictionaries": [ "test-dictionary" ] };
+    const config = { "dictionaries": { "en": [ "test-dictionary" ] } };
     for (const [ definition, message ] of [
       [ {}, /No dictionary definitions/u ],
       [ { "dictionaryDefinitions": [] }, /No dictionary definitions/u ],
@@ -259,7 +283,7 @@ test("rejects malformed dictionary packages before checking prose", () => {
       writeFileSync(join(path, "dictionary.json"), JSON.stringify(definition));
       assert.throws(() => lintContent("helo", config), message);
     }
-    assert.throws(() => lintContent("helo", { "dictionaries": [ "." ] }), /Invalid dictionary package name/u);
+    assert.throws(() => lintContent("helo", { "dictionaries": { "en": [ "." ] } }), /Invalid dictionary package name/u);
   } finally {
     process.chdir(cwd);
     rmSync(dir, { "recursive": true });
@@ -270,7 +294,7 @@ test("local dictionary fixes cover edit types but reject multi-edit suggestions"
   const dir = mkdtempSync(join(tmpdir(), "spellcheck-edits-"));
   try {
     const path = join(dir, "words.txt");
-    const config = { "dictionaries": [ path ], "autocorrect": true };
+    const config = { "dictionaries": { "en": [ path ] }, "autocorrect": true };
     for (const [ target, source, fixed ] of [
       [ "cat", "cta", "cat" ],
       [ "cat", "cot", "cat" ],
@@ -305,13 +329,13 @@ test("front matter defaults to string values with accurate escaped source spans"
   const errors = lintContent(source);
   assert.deepEqual(errors.map(({ lineNumber, errorRange }) => [ lineNumber, errorRange ]),
     [ [ 2, [ 9, 9 ] ], [ 4, [ 12, 4 ] ], [ 7, [ 1, 4 ] ] ]);
-  assert.deepEqual(lintContent(source, { "frontMatter": false }).map(({ lineNumber }) => lineNumber), [ 7 ]);
-  assert.deepEqual(lintContent(source, { "frontMatter": { "include": [] } }).map(({ lineNumber }) => lineNumber), [ 7 ]);
+  assert.deepEqual(lintContent(source, { "markdown": { "frontMatter": false } }).map(({ lineNumber }) => lineNumber), [ 7 ]);
+  assert.deepEqual(lintContent(source, { "markdown": { "frontMatter": { "include": [] } } }).map(({ lineNumber }) => lineNumber), [ 7 ]);
 });
 
 test("front matter includes parent subtrees and exclusions win", () => {
   const source = "---\nauthors:\n  - name: helo\n    bio: mispelled\nmetadata:\n  title: helo\n---\n";
-  const config = { "frontMatter": { "include": [ "authors", "metadata.title" ], "exclude": [ "authors.bio" ] } };
+  const config = { "markdown": { "frontMatter": { "include": [ "authors", "metadata.title" ], "exclude": [ "authors.bio" ] } } };
   assert.deepEqual(lintContent(source, config).map(({ lineNumber }) => lineNumber), [ 3, 6 ]);
 });
 
@@ -329,7 +353,7 @@ test("plain front matter fixes never change YAML string types", () => {
     writeFileSync(path, "true\nnull\n");
     const source = "---\nvalue: tru\nother: nul\n---\n";
     assert.equal(applyFixes(source, lintContent(source, {
-      "dictionaries": [ path ], "autocorrect": true
+      "dictionaries": { "en": [ path ] }, "autocorrect": true
     })), source);
   } finally {
     rmSync(dir, { "recursive": true });
@@ -350,14 +374,14 @@ test("front matter can be disabled without changing markdownlint front matter st
   const result = lint({
     "strings": { "source": "---\ntitle: helo\n---\nhello\n" },
     "customRules": [ rule ],
-    "config": { "default": false, "spellcheck": { "frontMatter": false } }
+    "config": { "default": false, "spellcheck": { "markdown": { "frontMatter": false } } }
   });
   assert.deepEqual(result.source, []);
 });
 
 test("invalid front matter configuration, YAML, and stripped input fail explicitly", () => {
   for (const frontMatter of [ null, [], "yes", { "include": "title" }, { "exclude": [ "" ] }, { "include": [ "a..b" ] } ]) {
-    assert.throws(() => lintContent("hello", { frontMatter }), /frontMatter/u);
+    assert.throws(() => lintContent("hello", { "markdown": { frontMatter } }), /frontMatter/u);
   }
   for (const source of [ "---\ntitle: [\n---\n", "---\ntitle: helo\n", "---\na: !unknown helo\n---\n" ]) {
     assert.throws(() => lintContent(source), /YAML front matter/u);

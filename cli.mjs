@@ -3,8 +3,9 @@
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { relative, resolve } from "node:path";
 import { parseArgs } from "node:util";
+import { dictionaryEntries, markdownOptions } from "./configuration.mjs";
 
-const usage = "Usage: markdownlint-rule-spellcheck collect <globs...> [--output .spellcheck.txt] [--dictionary package-or-file ...]\n       markdownlint-rule-spellcheck add <dictionary.txt> [--config .markdownlint.json]";
+const usage = "Usage: markdownlint-rule-spellcheck collect <globs...> [--output .spellcheck.txt] [--dictionary package-or-file ...]\n       markdownlint-rule-spellcheck add <dictionary.txt> [--config .markdownlint.json] [--language en]";
 
 try {
   const { values, positionals } = parseArgs({
@@ -12,6 +13,7 @@ try {
     "options": {
       "output": { "type": "string", "default": ".spellcheck.txt" },
       "dictionary": { "type": "string", "multiple": true },
+      "language": { "type": "string", "default": "en" },
       "config": { "type": "string", "default": ".markdownlint.json" },
       "help": { "type": "boolean" }
     }
@@ -20,6 +22,9 @@ try {
     console.log(usage);
   } else {
     const [ command, ...patterns ] = positionals;
+    if (!values.language.trim()) {
+      throw new Error("--language must be nonempty.");
+    }
     if (command === "add") {
       if (patterns.length !== 1 || !patterns[0].endsWith(".txt")) {
         throw new Error(usage);
@@ -45,15 +50,16 @@ try {
       if (settings.dictionaryFiles !== undefined) {
         throw new Error("Replace spellcheck.dictionaryFiles with dictionaries before using add.");
       }
-      const dictionaries = settings.dictionaries === undefined ? [ "@cspell/dict-en_us" ] : settings.dictionaries;
-      if (!Array.isArray(dictionaries) || !dictionaries.length ||
-          dictionaries.some((name) => typeof name !== "string" || !name)) {
-        throw new Error("spellcheck.dictionaries must be a nonempty array of strings.");
-      }
+      markdownOptions(settings);
+      const dictionaries = dictionaryEntries(settings.dictionaries);
+      const entries = Object.hasOwn(dictionaries, values.language) ? dictionaries[values.language] : [];
       const path = resolve(patterns[0]);
       const entry = `./${relative(process.cwd(), path).split("\\").join("/")}`;
-      settings.dictionaries = dictionaries.some((name) => name.endsWith(".txt") && resolve(name) === path) ?
-        dictionaries : [ ...dictionaries, entry ];
+      settings.dictionaries = {
+        ...dictionaries,
+        [values.language]: entries.some((name) => name.endsWith(".txt") && resolve(name) === path) ?
+          entries : [ ...entries, entry ]
+      };
       config.spellcheck = settings;
       // dictionary paths are cwd-relative, even when configuration lives elsewhere.
       writeFileSync(values.config, `${JSON.stringify(config, null, 2)}\n`, { "flag": exists ? "w" : "wx" });
@@ -76,7 +82,7 @@ try {
           "customRules": [ rule ],
           "config": {
             "default": false,
-            "spellcheck": { "dictionaries": values.dictionary ?? [ "@cspell/dict-en_us" ] }
+            "spellcheck": { "dictionaries": { [values.language]: values.dictionary ?? [ "@cspell/dict-en_us" ] } }
           }
         }).content;
         const lines = content.split(/\r\n|\r|\n/u);

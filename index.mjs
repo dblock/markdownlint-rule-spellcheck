@@ -4,6 +4,7 @@ import { dirname, isAbsolute, resolve } from "node:path";
 import { gunzipSync } from "node:zlib";
 import { createCollection, createSpellingDictionary, createSpellingDictionaryFromTrieFile } from "cspell-dictionary";
 import { frontMatter } from "./front-matter.mjs";
+import { dictionaryEntries, markdownOptions } from "./configuration.mjs";
 
 const require = createRequire(import.meta.url);
 const excludedTypes = new Set([
@@ -41,10 +42,8 @@ function suggest(dictionary, word) {
 }
 
 function getDictionaries(packages) {
-  if (!Array.isArray(packages) || !packages.length ||
-      packages.some((name) => typeof name !== "string" || !name ||
-        !(name.endsWith(".txt") || /^(?:@[\w.-]+\/)?[\w.-]+$/u.test(name)))) {
-    throw new Error("spellcheck.dictionaries must be a nonempty array of CSpell package names or .txt file paths.");
+  if (packages.some((name) => !(name.endsWith(".txt") || /^(?:@[\w.-]+\/)?[\w.-]+$/u.test(name)))) {
+    throw new Error("spellcheck.dictionaries entries must be CSpell package names or .txt file paths.");
   }
   const localRequire = createRequire(resolve("package.json"));
   const dictionaries = packages.flatMap((name) => {
@@ -259,11 +258,12 @@ export function createRule({ suggestions: includeSuggestions = true } = {}) {
       if (config.dictionaryFiles !== undefined) {
         throw new Error("spellcheck.dictionaryFiles has been replaced by spellcheck.dictionaries. Include English explicitly alongside .txt files.");
       }
-      const dictionary = getDictionaries(config.dictionaries === undefined ? [ "@cspell/dict-en_us" ] : config.dictionaries);
+      const markdown = markdownOptions(config);
+      const dictionary = getDictionaries([ ...new Set(Object.values(dictionaryEntries(config.dictionaries)).flat()) ]);
       const correct = (word) => dictionary.has(word, { "ignoreCase": false });
       const suggestionsByWord = new Map();
       const liquid = liquidRanges(params);
-      const front = frontMatter(params, config.frontMatter);
+      const front = frontMatter(params, markdown.frontMatter);
       const tokens = [
         ...front.tokens,
         ...[ ...proseTokens(params.parsers.micromark.tokens) ].filter((token) => token.startLine > front.endLine)

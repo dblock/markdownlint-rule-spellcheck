@@ -12,7 +12,7 @@ test("front matter checks strings by default and fixes only safe plain values", 
 
 test("front matter nested include and exclude paths traverse array values", (t) => {
   const fixture = project(t, "front-matter", {
-    "frontMatter": { "include": [ "authors", "metadata" ], "exclude": [ "metadata.hidden" ] }
+    "markdown": { "frontMatter": { "include": [ "authors", "metadata" ], "exclude": [ "metadata.hidden" ] } }
   });
   const result = fixture.run("example.md");
   assert.equal(result.status, 1, result.stderr);
