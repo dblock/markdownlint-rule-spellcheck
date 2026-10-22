@@ -14,4 +14,6 @@ Integration tests copy Markdown inputs from `test/fixtures/` into temporary proj
 
 Run `npm run coverage` for unit and integration coverage, including CLI subprocesses. Reports are written to `coverage/`; CI publishes them to Coveralls on Node 24.
 
+Run the dictionary collector locally with `node cli.mjs collect "**/*.md" --output .spellcheck.txt`; review candidates before using the generated file.
+
 Linting checks JavaScript with ESLint and Markdown with markdownlint. Markdown paragraphs stay on one source line.

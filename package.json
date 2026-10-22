@@ -5,14 +5,18 @@
   "type": "module",
   "main": "index.mjs",
   "exports": "./index.mjs",
+  "bin": {
+    "markdownlint-rule-spellcheck": "./cli.mjs"
+  },
   "files": [
     "CHANGELOG.md",
     "index.mjs",
+    "cli.mjs",
     "README.md"
   ],
   "scripts": {
     "lint": "eslint . && markdownlint-cli2 \"**/*.md\"",
-    "coverage": "c8 --all --include=index.mjs --reporter=text --reporter=lcov node --test",
+    "coverage": "c8 --all --include=index.mjs --include=cli.mjs --reporter=text --reporter=lcov node --test",
     "test": "node --test"
   },
   "keywords": [
@@ -54,6 +58,7 @@
   },
   "dependencies": {
     "@cspell/dict-en_us": "^4.4.43",
-    "cspell-dictionary": "^10.4.0"
+    "cspell-dictionary": "^10.4.0",
+    "globby": "^16.2.4"
   }
 }

@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { createRequire } from "node:module";
-import { dirname, resolve } from "node:path";
+import { dirname, isAbsolute, resolve } from "node:path";
 import { gunzipSync } from "node:zlib";
 import { createCollection, createSpellingDictionary, createSpellingDictionaryFromTrieFile } from "cspell-dictionary";
 
@@ -23,11 +23,20 @@ const dictionaryCache = new Map();
 
 function getDictionaries(packages) {
   if (!Array.isArray(packages) || !packages.length ||
-      packages.some((name) => typeof name !== "string" || !/^(?:@[\w.-]+\/)?[\w.-]+$/u.test(name))) {
-    throw new Error("spellcheck.dictionaries must be a nonempty array of installed CSpell package names.");
+      packages.some((name) => typeof name !== "string" || !name ||
+        !(name.endsWith(".txt") || /^(?:@[\w.-]+\/)?[\w.-]+$/u.test(name)))) {
+    throw new Error("spellcheck.dictionaries must be a nonempty array of CSpell package names or .txt file paths.");
   }
   const localRequire = createRequire(resolve("package.json"));
   const dictionaries = packages.flatMap((name) => {
+    if (name.endsWith(".txt")) {
+      return createSpellingDictionary(
+        [ ...readVocabulary(name) ], name, resolve(name), { "caseSensitive": true }
+      );
+    }
+    if (isAbsolute(name) || name.startsWith(".")) {
+      throw new Error(`Invalid dictionary package name: ${name}. Local dictionaries must be .txt files.`);
+    }
     const configPath = name === "@cspell/dict-en_us" ? require.resolve(name) : localRequire.resolve(name);
     if (dictionaryCache.has(configPath)) {
       return dictionaryCache.get(configPath);
@@ -75,23 +84,18 @@ function getDictionaries(packages) {
   };
 }
 
-function readVocabulary(files) {
-  if (!Array.isArray(files) || files.some((file) => typeof file !== "string" || !file)) {
-    throw new Error("spellcheck.dictionaryFiles must be an array of nonempty file paths.");
-  }
+function readVocabulary(file) {
   const words = new Set();
-  for (const file of files) {
-    const path = resolve(file);
-    for (const [ index, line ] of readFileSync(path, "utf8").split(/\r?\n/u).entries()) {
-      const word = line.trim();
-      if (!word || word.startsWith("#")) {
-        continue;
-      }
-      if (!wordOnly.test(word)) {
-        throw new Error(`Invalid vocabulary word at ${path}:${index + 1}: ${word}`);
-      }
-      words.add(word);
+  const path = resolve(file);
+  for (const [ index, line ] of readFileSync(path, "utf8").split(/\r?\n/u).entries()) {
+    const word = line.trim();
+    if (!word || word.startsWith("#")) {
+      continue;
     }
+    if (!wordOnly.test(word)) {
+      throw new Error(`Invalid vocabulary word at ${path}:${index + 1}: ${word}`);
+    }
+    words.add(word);
   }
   return words;
 }
@@ -163,9 +167,11 @@ const rule = {
     if ((config.autocorrect !== undefined) && (typeof config.autocorrect !== "boolean")) {
       throw new Error("spellcheck.autocorrect must be a boolean.");
     }
-    const vocabulary = readVocabulary(config.dictionaryFiles === undefined ? [] : config.dictionaryFiles);
+    if (config.dictionaryFiles !== undefined) {
+      throw new Error("spellcheck.dictionaryFiles has been replaced by spellcheck.dictionaries. Include English explicitly alongside .txt files.");
+    }
     const dictionary = getDictionaries(config.dictionaries === undefined ? [ "@cspell/dict-en_us" ] : config.dictionaries);
-    const correct = (word) => vocabulary.has(word) || dictionary.has(word, { "ignoreCase": false });
+    const correct = (word) => dictionary.has(word, { "ignoreCase": false });
     const suggestionsByWord = new Map();
     for (const token of proseTokens(params.parsers.micromark.tokens)) {
       const text = token.text.replace(nonProsePattern, (match) => " ".repeat(match.length));
