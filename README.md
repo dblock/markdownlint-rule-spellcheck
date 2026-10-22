@@ -1,5 +1,10 @@
 # markdownlint-rule-spellcheck
 
+[![CI](https://github.com/dblock/markdownlint-rule-spellcheck/actions/workflows/ci.yml/badge.svg)](https://github.com/dblock/markdownlint-rule-spellcheck/actions/workflows/ci.yml)
+[![Lint](https://github.com/dblock/markdownlint-rule-spellcheck/actions/workflows/lint.yml/badge.svg)](https://github.com/dblock/markdownlint-rule-spellcheck/actions/workflows/lint.yml)
+[![Node.js: >=22.18](https://img.shields.io/badge/node-%3E%3D22.18-brightgreen.svg)](https://nodejs.org/)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+
 A [markdownlint](https://github.com/DavidAnson/markdownlint) custom rule for prose spelling, powered by [CSpell](https://github.com/streetsidesoftware/cspell).
 
 ## Contents
@@ -13,10 +18,10 @@ A [markdownlint](https://github.com/DavidAnson/markdownlint) custom rule for pro
 
 ## Installation
 
-Requires Node.js 22.18 or later and markdownlint 0.41.1 or later. Not published to npm yet; install from GitHub:
+Requires Node.js 22.18 or later and markdownlint 0.41.1 or later.
 
 ```sh
-npm install --save-dev markdownlint-cli2 github:dblock/markdownlint-rule-spellcheck#implement-spellcheck
+npm install --save-dev markdownlint-cli2 markdownlint-rule-spellcheck
 ```
 
 ## Usage
