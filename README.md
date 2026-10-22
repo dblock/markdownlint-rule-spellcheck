@@ -74,8 +74,13 @@ In `.markdownlint.json`:
 ```json
 {
   "spellcheck": {
-    "dictionaries": ["@cspell/dict-en_us", "./.spellcheck.txt"],
-    "autocorrect": false
+    "dictionaries": {
+      "en": ["@cspell/dict-en_us", "./.spellcheck.txt"]
+    },
+    "autocorrect": false,
+    "markdown": {
+      "frontMatter": true
+    }
   }
 }
 ```
@@ -93,12 +98,29 @@ Then configure `.markdownlint.json`:
 ```json
 {
   "spellcheck": {
-    "dictionaries": ["@cspell/dict-es-es"]
+    "dictionaries": {
+      "es": ["@cspell/dict-es-es", "./.spellcheck.es.txt"]
+    }
   }
 }
 ```
 
-Omitting `dictionaries` uses American English. An explicit nonempty list replaces it and supplies both accepted words and suggestions. To combine English with technical vocabulary, install `@cspell/dict-software-terms` and use `["@cspell/dict-en_us", "@cspell/dict-software-terms"]`.
+Omitting `dictionaries` uses American English. An explicit language map replaces it; include an `en` entry if you still want English. Each language needs a nonempty list of packages or `.txt` files. A word is accepted by any configured dictionary, and suggestions come from all languages. Language keys label the dictionaries; they do not automatically install or select a language.
+
+For English and Spanish together:
+
+```json
+{
+  "spellcheck": {
+    "dictionaries": {
+      "en": ["@cspell/dict-en_us", "./.spellcheck.txt"],
+      "es": ["@cspell/dict-es-es", "./.spellcheck.es.txt"]
+    }
+  }
+}
+```
+
+Create the vocabulary files before referencing them, or omit them. To add technical vocabulary, install `@cspell/dict-software-terms` and append it to the relevant language's list.
 
 Install dictionary packages in your project; English is included with the rule. Only package dictionaries and local `.txt` files are supported, not CSpell configuration imports, Hunspell files, or system dictionaries.
 
@@ -111,6 +133,16 @@ npx markdownlint-rule-spellcheck collect "**/*.md" --dictionary @cspell/dict-en_
 ```
 
 Candidates are sorted and deduplicated. Collection respects Markdown exclusions and suppression comments, but does not load your markdownlint configuration, including front matter field selections. Normal linting never changes dictionary files.
+
+Use `add --language` to put vocabulary under a specific language (default: `en`):
+
+```sh
+npx markdownlint-rule-spellcheck collect "**/*.md" --dictionary @cspell/dict-es-es --output .spellcheck.es.txt
+# Review the candidates before accepting them.
+npx markdownlint-rule-spellcheck add ./.spellcheck.es.txt --language es
+```
+
+`add` preserves other languages and adds the file to the selected language, creating that entry if needed. It does not select a language dictionary for you.
 
 ## YAML front matter
 
@@ -132,9 +164,11 @@ Select fields in `.markdownlint.json`:
 ```json
 {
   "spellcheck": {
-    "frontMatter": {
-      "include": ["title", "description", "authors.name", "metadata"],
-      "exclude": ["metadata.id", "metadata.url"]
+    "markdown": {
+      "frontMatter": {
+        "include": ["title", "description", "authors.name", "metadata"],
+        "exclude": ["metadata.id", "metadata.url"]
+      }
     }
   }
 }
@@ -142,7 +176,7 @@ Select fields in `.markdownlint.json`:
 
 Omitting `include` checks all string values; `include: []` checks none. Dotted paths select nested fields, including fields inside arrays without numeric indices. Selecting a parent includes its subtree; exclusions win. Paths are case-sensitive, not globs.
 
-To skip front matter and keep markdownlint's default header handling, set `"spellcheck": { "frontMatter": false }` in `.markdownlint.json` and omit `"frontMatter": "a^"` from `.markdownlint-cli2.jsonc`.
+To skip front matter and keep markdownlint's default header handling, set `"spellcheck": { "markdown": { "frontMatter": false } }` in `.markdownlint.json` and omit `"frontMatter": "a^"` from `.markdownlint-cli2.jsonc`.
 
 Quoted strings and block values are checked but never autocorrected. Plain values can be corrected only when the result remains a YAML string.
 

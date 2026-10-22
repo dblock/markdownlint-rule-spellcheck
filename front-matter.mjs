@@ -3,12 +3,12 @@ import { isMap, isScalar, isSeq, parseDocument, parse } from "yaml";
 export function frontMatter(params, option) {
   const config = option === undefined || option === true ? {} : option;
   if (config !== false && (!config || typeof config !== "object" || Array.isArray(config))) {
-    throw new Error("spellcheck.frontMatter must be a boolean or an object.");
+    throw new Error("spellcheck.markdown.frontMatter must be a boolean or an object.");
   }
   for (const key of [ "include", "exclude" ]) {
     if (config && config[key] !== undefined && (!Array.isArray(config[key]) ||
         config[key].some((path) => typeof path !== "string" || !path || path.split(".").some((part) => !part)))) {
-      throw new Error(`spellcheck.frontMatter.${key} must be an array of dotted field paths.`);
+      throw new Error(`spellcheck.markdown.frontMatter.${key} must be an array of dotted field paths.`);
     }
   }
   if (params.frontMatterLines.length) {

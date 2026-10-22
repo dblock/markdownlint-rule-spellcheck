@@ -2,6 +2,7 @@
 
 ## (Next)
 
+* [#12](https://github.com/dblock/markdownlint-rule-spellcheck/pull/12): Group dictionaries by language and move front matter options under `markdown`; replace flat dictionary arrays with language maps and `spellcheck.frontMatter` with `spellcheck.markdown.frontMatter` — [@dblock](https://github.com/dblock).
 * [#11](https://github.com/dblock/markdownlint-rule-spellcheck/pull/11): Check YAML front matter strings by default with nested field selection and precise source ranges; requires disabling markdownlint front matter stripping — [@dblock](https://github.com/dblock).
 * [#10](https://github.com/dblock/markdownlint-rule-spellcheck/pull/10): Exclude Liquid expressions and tags from Markdown spelling, fixes, and vocabulary collection — [@dblock](https://github.com/dblock).
 * [#9](https://github.com/dblock/markdownlint-rule-spellcheck/pull/9): Preserve Unicode prose words and skip whole numeric and connector-punctuation tokens — [@dblock](https://github.com/dblock).
