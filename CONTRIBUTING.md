@@ -14,6 +14,8 @@ Integration tests copy Markdown inputs from `test/fixtures/` into temporary proj
 
 Run `npm run coverage` for unit and integration coverage, including CLI subprocesses. Reports are written to `coverage/`; CI publishes them to Coveralls on Node 24.
 
+When profiling, measure cold startup separately from repeated files. Suggestions are cached for at most 256 words per dictionary instance; local dictionaries are still reloaded on every lint invocation.
+
 Run the dictionary collector locally with `node cli.mjs collect "**/*.md" --output .spellcheck.txt`; review candidates before using the generated file.
 
 Linting checks JavaScript with ESLint and Markdown with markdownlint, including `markdownlint-rule-single-line-paragraphs` to keep paragraphs on one source line.

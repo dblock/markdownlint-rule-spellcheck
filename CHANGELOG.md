@@ -2,6 +2,7 @@
 
 ## (Next)
 
+* [#8](https://github.com/dblock/markdownlint-rule-spellcheck/pull/8): Reduce configuration command startup, reuse bounded dictionary suggestions across files, and cancel superseded PR workflow runs — [@dblock](https://github.com/dblock).
 * [#7](https://github.com/dblock/markdownlint-rule-spellcheck/pull/7): Speed up vocabulary collection by skipping suggestions and exclude suppressed words from candidates — [@dblock](https://github.com/dblock).
 * [#6](https://github.com/dblock/markdownlint-rule-spellcheck/pull/6): Spellcheck the project's own documentation and enforce single-line paragraphs in the lint workflow — [@dblock](https://github.com/dblock).
 * [#5](https://github.com/dblock/markdownlint-rule-spellcheck/pull/5): Unify local word files and packages under `dictionaries` (replacing `dictionaryFiles`) and add explicit `collect` and `add` commands for project dictionaries — [@dblock](https://github.com/dblock).
