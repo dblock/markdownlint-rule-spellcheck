@@ -13,6 +13,7 @@ import rule, { createRule } from "../index.mjs";
 
 function lintContent(content, config = true) {
   return lint({
+    "frontMatter": null,
     "strings": { content },
     "customRules": [ rule ],
     "config": { "default": false, "spellcheck": config }
@@ -82,7 +83,7 @@ test("checks prose in headings, emphasis, lists, quotes, tables, links, and imag
   ]);
 });
 
-test("skips code, HTML blocks, front matter, URLs, emails, link destinations and reference definitions", () => {
+test("skips code, HTML blocks, disabled front matter, URLs, emails, link destinations and reference definitions", () => {
   const source = [
     "---", "layout: wrng", "---", "",
     "`wrng`", "",
@@ -94,7 +95,7 @@ test("skips code, HTML blocks, front matter, URLs, emails, link destinations and
     "[hello](wrng.md \"wrng\") [hello][wrng]", "",
     "[wrng]: wrng.md \"wrng\""
   ].join("\n");
-  assert.deepEqual(lintContent(source), []);
+  assert.deepEqual(lintContent(source, { "frontMatter": false }), []);
 });
 
 test("preserves UTF-16 ranges after Unicode, tabs, inline markup, and CRLF", () => {
@@ -297,4 +298,73 @@ test("package exports load the actual rule", async () => {
   const packageJson = JSON.parse(readFileSync(new URL("../package.json", import.meta.url)));
   const { default: exported } = await import(packageJson.name);
   assert.equal(exported, rule);
+});
+
+test("front matter defaults to string values with accurate escaped source spans", () => {
+  const source = '---\r\ntitle: "he\\u006co"\r\nnested:\r\n  values: [helo, false, 123]\r\n---\r\n\r\nhelo\r\n';
+  const errors = lintContent(source);
+  assert.deepEqual(errors.map(({ lineNumber, errorRange }) => [ lineNumber, errorRange ]),
+    [ [ 2, [ 9, 9 ] ], [ 4, [ 12, 4 ] ], [ 7, [ 1, 4 ] ] ]);
+  assert.deepEqual(lintContent(source, { "frontMatter": false }).map(({ lineNumber }) => lineNumber), [ 7 ]);
+  assert.deepEqual(lintContent(source, { "frontMatter": { "include": [] } }).map(({ lineNumber }) => lineNumber), [ 7 ]);
+});
+
+test("front matter includes parent subtrees and exclusions win", () => {
+  const source = "---\nauthors:\n  - name: helo\n    bio: mispelled\nmetadata:\n  title: helo\n---\n";
+  const config = { "frontMatter": { "include": [ "authors", "metadata.title" ], "exclude": [ "authors.bio" ] } };
+  assert.deepEqual(lintContent(source, config).map(({ lineNumber }) => lineNumber), [ 3, 6 ]);
+});
+
+test("front matter aliases are not expanded and block and quoted values are report-only", () => {
+  const source = "---\ntitle: &title helo\nalias: *title\nquote: 'can''t helo'\nsummary: >\n  mispelled\n  helo\n---\n";
+  const errors = lintContent(source, { "autocorrect": true });
+  assert.deepEqual(errors.map(({ lineNumber }) => lineNumber), [ 2, 4, 6, 7 ]);
+  assert.equal(applyFixes(source, errors), source.replace("&title helo", "&title hello"));
+});
+
+test("plain front matter fixes never change YAML string types", () => {
+  const dir = mkdtempSync(join(tmpdir(), "spellcheck-yaml-type-"));
+  try {
+    const path = join(dir, "words.txt");
+    writeFileSync(path, "true\nnull\n");
+    const source = "---\nvalue: tru\nother: nul\n---\n";
+    assert.equal(applyFixes(source, lintContent(source, {
+      "dictionaries": [ path ], "autocorrect": true
+    })), source);
+  } finally {
+    rmSync(dir, { "recursive": true });
+  }
+});
+
+test("front matter handles escaped continuations without rewriting ambiguous spans", () => {
+  const source = '---\ntitle: "he\\\n  lo"\n---\n';
+  const errors = lintContent(source, { "autocorrect": true });
+  assert.equal(errors.length, 1);
+  assert.equal(errors[0].errorContext, "helo");
+  assert.equal(errors[0].lineNumber, 2);
+  assert.deepEqual(errors[0].errorRange, [ 9, 3 ]);
+  assert.equal(applyFixes(source, errors), source);
+});
+
+test("front matter can be disabled without changing markdownlint front matter stripping", () => {
+  const result = lint({
+    "strings": { "source": "---\ntitle: helo\n---\nhello\n" },
+    "customRules": [ rule ],
+    "config": { "default": false, "spellcheck": { "frontMatter": false } }
+  });
+  assert.deepEqual(result.source, []);
+});
+
+test("invalid front matter configuration, YAML, and stripped input fail explicitly", () => {
+  for (const frontMatter of [ null, [], "yes", { "include": "title" }, { "exclude": [ "" ] }, { "include": [ "a..b" ] } ]) {
+    assert.throws(() => lintContent("hello", { frontMatter }), /frontMatter/u);
+  }
+  for (const source of [ "---\ntitle: [\n---\n", "---\ntitle: helo\n", "---\na: !unknown helo\n---\n" ]) {
+    assert.throws(() => lintContent(source), /YAML front matter/u);
+  }
+  assert.throws(() => lint({
+    "strings": { "source": "---\ntitle: helo\n---\nhello\n" },
+    "customRules": [ rule ],
+    "config": { "default": false, "spellcheck": true }
+  }), /frontMatter.*null/u);
 });

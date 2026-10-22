@@ -9,6 +9,7 @@ A [markdownlint](https://github.com/DavidAnson/markdownlint) custom rule for pro
 - [Installation](#installation)
 - [Usage](#usage)
 - [Configuration](#configuration)
+- [YAML front matter](#yaml-front-matter)
 - [Corrections](#corrections)
 - [Scope](#scope)
 - [Contributing](CONTRIBUTING.md)
@@ -64,7 +65,7 @@ npx markdownlint-rule-spellcheck add ./.spellcheck.txt
 npx markdownlint-cli2 "**/*.md"
 ```
 
-`collect` refuses to overwrite an existing file. `add` creates or updates `.markdownlint.json`, preserving existing settings and keeping English unless you have selected other dictionaries. Repeating `add` does not duplicate entries. Use `--config path/to/config.json` to update another JSON configuration; JSONC and YAML are not supported by this command.
+`collect` refuses to overwrite an existing file. `add` updates `.markdownlint.json` without replacing existing settings or duplicating dictionaries. Use `--config path/to/config.json` for another JSON configuration; JSONC and YAML are not supported by `add`.
 
 ## Configuration
 
@@ -79,7 +80,7 @@ In `.markdownlint.json`:
 }
 ```
 
-Both options are optional. Local `.txt` dictionary paths are relative to the working directory, not the Markdown file; use `./.spellcheck.txt` as a project convention. Each file contains one case-sensitive word per line; blank lines and `#` comments are ignored. File dictionaries contribute both accepted words and suggestions, and are reread on each lint invocation. Missing files are errors.
+All options are optional. Local `.txt` dictionary paths are relative to the working directory. Each file contains one case-sensitive word per line; blank lines and `#` comments are ignored. Missing files are errors.
 
 American English is included for offline use. To replace it, install a CSpell dictionary package:
 
@@ -99,30 +100,64 @@ Then configure `.markdownlint.json`:
 
 Omitting `dictionaries` uses American English. An explicit nonempty list replaces it and supplies both accepted words and suggestions. To combine English with technical vocabulary, install `@cspell/dict-software-terms` and use `["@cspell/dict-en_us", "@cspell/dict-software-terms"]`.
 
-Packages are resolved from the working directory; English is included with the rule. Each package must export a JSON configuration with `dictionaryDefinitions` pointing to `.trie` or `.txt` files, optionally gzipped. All definitions in those packages are loaded offline; configuration imports, language settings, and other CSpell configuration are not applied. Direct Hunspell files and system or personal dictionaries are not supported.
+Install dictionary packages in your project; English is included with the rule. Only package dictionaries and local `.txt` files are supported, not CSpell configuration imports, Hunspell files, or system dictionaries.
 
 ### Creating a project dictionary
 
-Collect unknown words into a new file, then remove typos before adding it to `dictionaries`:
+The `collect` command shown above uses English by default. Repeat `--dictionary` to select other dictionaries:
 
 ```sh
-npx markdownlint-rule-spellcheck collect "**/*.md" --output .spellcheck.txt
+npx markdownlint-rule-spellcheck collect "**/*.md" --dictionary @cspell/dict-en_us --dictionary @cspell/dict-software-terms --output .spellcheck.txt
 ```
 
-The command writes sorted, unique candidates and refuses to overwrite an existing file. It uses English by default; repeat `--dictionary` to select packages or existing `.txt` dictionaries. It checks the supplied files with normal Markdown exclusions and suppression comments, but does not load markdownlint configuration. Normal linting never creates or updates dictionaries.
+Candidates are sorted and deduplicated. Collection respects Markdown exclusions and suppression comments, but does not load your markdownlint configuration, including front matter field selections. Normal linting never changes dictionary files.
+
+## YAML front matter
+
+YAML front matter checking is enabled by default for string values, including nested objects and arrays. Keys, numbers, booleans, and comments are skipped. Anchored strings are checked once, not at each alias. Malformed YAML is an error.
+
+To check front matter, add `"frontMatter": "a^"` to `.markdownlint-cli2.jsonc`:
+
+```json
+{
+  "frontMatter": "a^",
+  "customRules": ["markdownlint-rule-spellcheck"]
+}
+```
+
+This required setting stops markdownlint from removing the YAML header before checking it. `a^` is a regular expression that never matches. Without it, files with front matter produce a setup error. Other Markdown rules will also see the header and may need configuration.
+
+Select fields in `.markdownlint.json`:
+
+```json
+{
+  "spellcheck": {
+    "frontMatter": {
+      "include": ["title", "description", "authors.name", "metadata"],
+      "exclude": ["metadata.id", "metadata.url"]
+    }
+  }
+}
+```
+
+Omitting `include` checks all string values; `include: []` checks none. Dotted paths select nested fields, including fields inside arrays without numeric indices. Selecting a parent includes its subtree; exclusions win. Paths are case-sensitive, not globs.
+
+To skip front matter and keep markdownlint's default header handling, set `"spellcheck": { "frontMatter": false }` in `.markdownlint.json` and omit `"frontMatter": "a^"` from `.markdownlint-cli2.jsonc`.
+
+Quoted strings and block values are checked but never autocorrected. Plain values can be corrected only when the result remains a YAML string.
 
 ## Corrections
 
 By default, diagnostics include suggestions but no fixes. Set `autocorrect: true` and run `npx markdownlint-cli2 --fix "**/*.md"` to enable replacements.
 
-For example, `helo` becomes `hello`. Only the first suggestion is considered, and it must be a valid word exactly one insertion, deletion, substitution, or adjacent transposition away. Fixes preserve lowercase or title case; ALL CAPS, mixed case, and words inside dotted, hyphenated, numbered, or identifier-like tokens are left unchanged. Review the diff: a one-edit correction can still change your meaning.
+For example, `helo` becomes `hello`. Fixes use the first suggestion only when it differs by one letter edit or transposition. Lowercase and title case are preserved; ALL CAPS, mixed case, and words inside dotted, hyphenated, numbered, or identifier-like tokens are left unchanged. Review the diff: a correction can still change your meaning.
 
 ## Scope
 
 Checks spelling, not grammar, in headings, paragraphs, lists, quotes, tables, link labels, and image descriptions.
 
-Skips code, HTML blocks and tags, front matter, link destinations/titles/reference definitions, URLs, email addresses, and entity-encoded word fragments. Does not split identifiers; add project terms through `.txt` dictionaries or install technical dictionaries.
+Skips code, HTML blocks and tags, link destinations/titles/reference definitions, URLs, email addresses, and entity-encoded word fragments. Does not split identifiers; add project terms through `.txt` dictionaries or install technical dictionaries.
 
-Words start with a Unicode letter and retain combining marks and internal straight or curly apostrophes. Tokens containing numbers or connector punctuation (including underscores) are skipped as a whole: `sha256`, `can't2stop`, and `wrong_token` do not produce partial diagnostics. Hyphens separate words, so `helo-world` still flags `helo`, but is not autocorrected. Markdown emphasis such as `_helo_` is checked. Source spelling and accent representation are preserved without Unicode normalization.
+Accented words and apostrophes are supported. Tokens containing numbers or connector punctuation (including underscores) are skipped: `sha256`, `can't2stop`, and `wrong_token`. Hyphens separate words, so `helo-world` flags `helo` but is not autocorrected. Markdown emphasis such as `_helo_` is checked.
 
-Liquid expressions (`{{ ... }}`) and tags (`{% ... %}`), including multiline forms, are excluded from spelling, fixes, and vocabulary collection. Only the delimited contents are skipped, not surrounding prose. Each ends at the first matching closing delimiter; unmatched openers remain literal. Templates are never evaluated. Openers in Markdown code cannot hide later prose.
+Liquid expressions (`{{ ... }}`) and tags (`{% ... %}`), including multiline forms, are skipped; surrounding prose is checked. Each ends at the first matching closing delimiter. Unmatched openers remain ordinary text.
