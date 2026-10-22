@@ -3,6 +3,7 @@ import { createRequire } from "node:module";
 import { dirname, isAbsolute, resolve } from "node:path";
 import { gunzipSync } from "node:zlib";
 import { createCollection, createSpellingDictionary, createSpellingDictionaryFromTrieFile } from "cspell-dictionary";
+import { frontMatter } from "./front-matter.mjs";
 
 const require = createRequire(import.meta.url);
 const excludedTypes = new Set([
@@ -262,20 +263,35 @@ export function createRule({ suggestions: includeSuggestions = true } = {}) {
       const correct = (word) => dictionary.has(word, { "ignoreCase": false });
       const suggestionsByWord = new Map();
       const liquid = liquidRanges(params);
-      for (const token of proseTokens(params.parsers.micromark.tokens)) {
+      const front = frontMatter(params, config.frontMatter);
+      const tokens = [
+        ...front.tokens,
+        ...[ ...proseTokens(params.parsers.micromark.tokens) ].filter((token) => token.startLine > front.endLine)
+      ];
+      for (const token of tokens) {
         const text = token.text.replace(nonProsePattern, (match) => " ".repeat(match.length));
         const lines = text.split(/\r\n|\r|\n/u);
+        let textOffset = 0;
         for (const [ index, line ] of lines.entries()) {
-          const lineNumber = token.startLine + index;
+          const tokenOffset = textOffset;
+          textOffset += line.length + (text.startsWith("\r\n", tokenOffset + line.length) ? 2 : 1);
+          let lineNumber = token.startLine + index;
           const startColumn = index ? 1 : token.startColumn;
-          const source = params.lines[lineNumber - 1];
           for (const match of line.matchAll(wordPattern)) {
             const word = match[0];
             if (!wordOnly.test(word) || correct(word)) {
               continue;
             }
-            const first = startColumn - 1 + match.index;
-            const last = first + word.length;
+            const mapped = token.mapping?.slice(tokenOffset + match.index, tokenOffset + match.index + word.length);
+            const firstPosition = mapped?.[0][0];
+            const lastPosition = mapped?.at(-1)[1];
+            if (firstPosition) {
+              lineNumber = firstPosition.line;
+            }
+            const source = params.lines[lineNumber - 1];
+            const first = firstPosition ? firstPosition.column - 1 : startColumn - 1 + match.index;
+            const last = lastPosition ?
+              (lastPosition.line === lineNumber ? lastPosition.column - 1 : source.length) : first + word.length;
             const offset = liquid.position(lineNumber, first + 1);
             if (liquid.ranges.some(([ start, end ]) => offset < end && offset + word.length > start)) {
               continue;
@@ -292,12 +308,17 @@ export function createRule({ suggestions: includeSuggestions = true } = {}) {
               suggestionsByWord.set(word, suggestions);
             }
             suggestions ??= [];
-            const fix = config.autocorrect && standalone(source, first, last) ?
+            let fix = config.autocorrect && (!token.frontMatter || token.allowFix) &&
+              source.slice(first, last) === word && standalone(source, first, last) ?
               replacement(word, suggestions, correct) : undefined;
+            if (fix && token.frontMatter && !token.safeFix(tokenOffset + match.index, word.length, fix)) {
+              fix = undefined;
+            }
             onError({
               lineNumber,
               "detail": `Misspelled word: "${word}".${suggestions.length ? ` Suggestions: ${suggestions.join(", ")}.` : ""}`,
               "range": [ first + 1, word.length ],
+              ...(token.frontMatter ? { "range": [ first + 1, last - first ], "context": word } : {}),
               ...(fix ? {
                 "fixInfo": { "editColumn": first + 1, "deleteCount": word.length, "insertText": fix }
               } : {})

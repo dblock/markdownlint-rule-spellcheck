@@ -71,6 +71,7 @@ try {
       for (const file of files) {
         const content = readFileSync(file, "utf8");
         const errors = lint({
+          "frontMatter": null,
           "strings": { content },
           "customRules": [ rule ],
           "config": {
@@ -81,7 +82,7 @@ try {
         const lines = content.split(/\r\n|\r|\n/u);
         for (const error of errors) {
           const [ column, length ] = error.errorRange;
-          words.add(lines[error.lineNumber - 1].slice(column - 1, column - 1 + length));
+          words.add(error.errorContext || lines[error.lineNumber - 1].slice(column - 1, column - 1 + length));
         }
       }
       const entries = [ ...words ].sort();

@@ -2,6 +2,7 @@
 
 - Keep the custom rule in `index.mjs` compatible with Node.js 22.18 and later. CSpell is ESM-only; do not load private package paths to emulate CommonJS support.
 - Use markdownlint's micromark tokens and original source coordinates. Do not reparse or rewrite Markdown to extract prose.
+- Front matter is parsed as YAML with source metadata. Keep nested field filters, decoded collection words, and report-only ambiguous scalars consistent; never allow a fix to change a YAML string into another type.
 - Keep dictionary access offline and explicit. Never discover CSpell configuration or download resources while linting.
 - Add focused tests in `test/spellcheck.test.mjs` for behavior changes, including exact diagnostic and fix ranges and real CSpell dictionaries. CLI integration tests belong in `test/integration/*.test.mjs`, with `.md` fixtures and adjacent `.expected.md` files.
 - Autocorrection is opt-in: lowercase/title case, dictionary-valid first suggestion exactly one edit away, outside dotted and identifier-like tokens. ALL CAPS and mixed case remain report-only.

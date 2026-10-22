@@ -16,6 +16,7 @@ export function project(t, name, config = {}) {
   const entry = fileURLToPath(new URL("../../index.mjs", import.meta.url));
   const cli = fileURLToPath(new URL("../../node_modules/markdownlint-cli2/markdownlint-cli2-bin.mjs", import.meta.url));
   writeFileSync(join(dir, ".markdownlint-cli2.jsonc"), JSON.stringify({
+    "frontMatter": "a^",
     "customRules": [ entry ],
     "config": { "default": false, "spellcheck": config }
   }));
