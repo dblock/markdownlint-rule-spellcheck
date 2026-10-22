@@ -3,16 +3,16 @@
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { relative, resolve } from "node:path";
 import { parseArgs } from "node:util";
+import { fileURLToPath } from "node:url";
 import { dictionaryEntries, markdownOptions } from "./configuration.mjs";
 
-const usage = "Usage: markdownlint-rule-spellcheck collect <globs...> [--output .spellcheck.txt] [--dictionary package-or-file ...]\n       markdownlint-rule-spellcheck add <dictionary.txt> [--config .markdownlint.json] [--language en]";
+const usage = "Usage: markdownlint-rule-spellcheck collect <globs...> [--output .spellcheck.txt]\n       markdownlint-rule-spellcheck add <dictionary.txt> [--config .markdownlint.json] [--language en]";
 
 try {
   const { values, positionals } = parseArgs({
     "allowPositionals": true,
     "options": {
       "output": { "type": "string", "default": ".spellcheck.txt" },
-      "dictionary": { "type": "string", "multiple": true },
       "language": { "type": "string", "default": "en" },
       "config": { "type": "string", "default": ".markdownlint.json" },
       "help": { "type": "boolean" }
@@ -65,37 +65,19 @@ try {
       writeFileSync(values.config, `${JSON.stringify(config, null, 2)}\n`, { "flag": exists ? "w" : "wx" });
       console.log(`Added ${entry} to ${values.config}.`);
     } else if (command === "collect" && patterns.length) {
-      const [ { globby }, { lint }, { createRule } ] = await Promise.all([
-        import("globby"), import("markdownlint/sync"), import("./index.mjs")
-      ]);
-      const files = await globby(patterns, { "ignore": [ "node_modules/**", "coverage/**" ], "gitignore": true });
-      if (!files.length) {
-        throw new Error("No Markdown files matched the supplied patterns.");
+      const { main } = await import("markdownlint-cli2");
+      const status = await main({
+        "argv": patterns,
+        "optionsOverride": {
+          "fix": false,
+          "outputFormatters": [ [ fileURLToPath(new URL("./vocabulary-formatter.mjs", import.meta.url)), values.output ] ]
+        },
+        "logMessage": console.log,
+        "logError": (message) => { throw new Error(message); }
+      });
+      if (status > 1) {
+        throw new Error(`markdownlint-cli2 failed with exit code ${status}.`);
       }
-      const words = new Set();
-      const rule = createRule({ "suggestions": false });
-      for (const file of files) {
-        const content = readFileSync(file, "utf8");
-        const errors = lint({
-          "strings": { content },
-          "customRules": [ rule ],
-          "config": {
-            "default": false,
-            "spellcheck": { "dictionaries": { [values.language]: values.dictionary ?? [ "@cspell/dict-en_us" ] } }
-          }
-        }).content;
-        const lines = content.split(/\r\n|\r|\n/u);
-        for (const error of errors) {
-          const [ column, length ] = error.errorRange;
-          words.add(error.errorContext || lines[error.lineNumber - 1].slice(column - 1, column - 1 + length));
-        }
-      }
-      const entries = [ ...words ].sort();
-      writeFileSync(values.output, [
-        "# Review these candidates: remove typos before using this dictionary.",
-        ...entries, ""
-      ].join("\n"), { "flag": "wx" });
-      console.log(`Created ${values.output} with ${entries.length} candidate words. Review before adding it to dictionaries.`);
     } else {
       throw new Error(usage);
     }

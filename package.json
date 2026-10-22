@@ -4,7 +4,10 @@
   "description": "A markdownlint custom rule for spelling checks powered by CSpell.",
   "type": "module",
   "main": "index.mjs",
-  "exports": "./index.mjs",
+  "exports": {
+    ".": "./index.mjs",
+    "./vocabulary-formatter": "./vocabulary-formatter.mjs"
+  },
   "bin": {
     "markdownlint-rule-spellcheck": "./cli.mjs"
   },
@@ -14,12 +17,13 @@
     "front-matter.mjs",
     "configuration.mjs",
     "cli.mjs",
+    "vocabulary-formatter.mjs",
     "README.md",
     "UPGRADING.md"
   ],
   "scripts": {
     "lint": "eslint . && markdownlint-cli2 \"**/*.md\"",
-    "coverage": "c8 --all --include=index.mjs --include=cli.mjs --include=front-matter.mjs --include=configuration.mjs --reporter=text --reporter=lcov node --test",
+    "coverage": "c8 --all --include=index.mjs --include=cli.mjs --include=vocabulary-formatter.mjs --include=front-matter.mjs --include=configuration.mjs --reporter=text --reporter=lcov node --test",
     "test": "node --test"
   },
   "keywords": [
@@ -47,7 +51,13 @@
     "node": ">=22.18.0"
   },
   "peerDependencies": {
-    "markdownlint": ">=0.42.0"
+    "markdownlint": ">=0.42.0",
+    "markdownlint-cli2": ">=0.24.0"
+  },
+  "peerDependenciesMeta": {
+    "markdownlint-cli2": {
+      "optional": true
+    }
   },
   "devDependencies": {
     "@cspell/dict-es-es": "^3.0.9",
@@ -63,7 +73,6 @@
   "dependencies": {
     "@cspell/dict-en_us": "^4.4.43",
     "cspell-dictionary": "^10.4.0",
-    "globby": "^16.2.4",
     "yaml": "^2.9.1"
   }
 }

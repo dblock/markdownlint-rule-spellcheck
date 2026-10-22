@@ -78,7 +78,7 @@ test("add rejects unsupported configuration formats and invalid command argument
   }
 });
 
-test("CLI help and usage errors describe collect and add", (t) => {
+test("CLI help describes collect and add", (t) => {
   const fixture = project(t, "basic");
   const help = fixture.command("--help");
   assert.equal(help.status, 0, help.stderr);
