@@ -27,3 +27,11 @@ test("collect uses selected dictionaries and fails without creating misleading o
   assert.equal(unmatched.status, 1);
   assert.match(unmatched.stderr, /No Markdown files matched/u);
 });
+
+test("collect excludes suppressed vocabulary candidates", (t) => {
+  const fixture = project(t, "vocabulary");
+  const result = fixture.collect("example.md", "--dictionary", "@cspell/dict-en_us", "--dictionary", "./words.txt");
+  assert.equal(result.status, 0, result.stderr);
+  assert.equal(fixture.read(".spellcheck.txt"),
+    "# Review these candidates: remove typos before using this dictionary.\nhelo\n");
+});

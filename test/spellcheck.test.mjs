@@ -5,7 +5,7 @@ import { join } from "node:path";
 import test from "node:test";
 import { applyFixes } from "markdownlint";
 import { lint } from "markdownlint/sync";
-import rule from "../index.mjs";
+import rule, { createRule } from "../index.mjs";
 
 function lintContent(content, config = true) {
   return lint({
@@ -19,6 +19,18 @@ function words(content, config) {
   return lintContent(content, config).map((error) =>
     content.split(/\r\n|\r|\n/u)[error.lineNumber - 1].slice(error.errorRange[0] - 1, error.errorRange[0] - 1 + error.errorRange[1]));
 }
+
+test("collection mode reports identical ranges without suggestions or fixes", () => {
+  const content = "helo mispelled";
+  const errors = lint({
+    "strings": { content },
+    "customRules": [ createRule({ "suggestions": false }) ],
+    "config": { "default": false, "spellcheck": { "autocorrect": true } }
+  }).content;
+  assert.deepEqual(errors.map(({ errorRange }) => errorRange),
+    lintContent(content).map(({ errorRange }) => errorRange));
+  assert(errors.every((error) => !error.fixInfo && !error.errorDetail.includes("Suggestions:")));
+});
 
 test("checks prose in headings, emphasis, lists, quotes, tables, links, and image labels", () => {
   const source = [

@@ -5,7 +5,7 @@ import { relative, resolve } from "node:path";
 import { parseArgs } from "node:util";
 import { globby } from "globby";
 import { lint } from "markdownlint/sync";
-import rule from "./index.mjs";
+import { createRule } from "./index.mjs";
 
 const usage = "Usage: markdownlint-rule-spellcheck collect <globs...> [--output .spellcheck.txt] [--dictionary package-or-file ...]\n       markdownlint-rule-spellcheck add <dictionary.txt> [--config .markdownlint.json]";
 
@@ -67,23 +67,22 @@ try {
         throw new Error("No Markdown files matched the supplied patterns.");
       }
       const words = new Set();
-      const collector = {
-        ...rule,
-        "function": (params, onError) => rule.function(params, (error) => {
-          const [ column, length ] = error.range;
-          words.add(params.lines[error.lineNumber - 1].slice(column - 1, column - 1 + length));
-          onError(error);
-        })
-      };
+      const rule = createRule({ "suggestions": false });
       for (const file of files) {
-        lint({
-          "strings": { [file]: readFileSync(file, "utf8") },
-          "customRules": [ collector ],
+        const content = readFileSync(file, "utf8");
+        const errors = lint({
+          "strings": { content },
+          "customRules": [ rule ],
           "config": {
             "default": false,
             "spellcheck": { "dictionaries": values.dictionary ?? [ "@cspell/dict-en_us" ] }
           }
-        });
+        }).content;
+        const lines = content.split(/\r\n|\r|\n/u);
+        for (const error of errors) {
+          const [ column, length ] = error.errorRange;
+          words.add(lines[error.lineNumber - 1].slice(column - 1, column - 1 + length));
+        }
       }
       const entries = [ ...words ].sort();
       writeFileSync(values.output, [
