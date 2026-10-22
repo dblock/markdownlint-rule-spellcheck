@@ -7,6 +7,7 @@ A [markdownlint](https://github.com/DavidAnson/markdownlint) custom rule for pro
 ## Contents
 
 - [Installation](#installation)
+- [Upgrading](UPGRADING.md)
 - [Usage](#usage)
 - [Configuration](#configuration)
 - [YAML front matter](#yaml-front-matter)
@@ -16,7 +17,7 @@ A [markdownlint](https://github.com/DavidAnson/markdownlint) custom rule for pro
 
 ## Installation
 
-Requires Node.js 22.18 or later and markdownlint 0.41.1 or later.
+Requires Node.js 22.18 or later and markdownlint 0.42.0 or later.
 
 ```sh
 npm install --save-dev markdownlint-cli2 markdownlint-rule-spellcheck
@@ -148,17 +149,6 @@ npx markdownlint-rule-spellcheck add ./.spellcheck.es.txt --language es
 
 YAML front matter checking is enabled by default for string values, including nested objects and arrays. Keys, numbers, booleans, and comments are skipped. Anchored strings are checked once, not at each alias. Malformed YAML is an error.
 
-To check front matter, add `"frontMatter": "a^"` to `.markdownlint-cli2.jsonc`:
-
-```json
-{
-  "frontMatter": "a^",
-  "customRules": ["markdownlint-rule-spellcheck"]
-}
-```
-
-This required setting stops markdownlint from removing the YAML header before checking it. `a^` is a regular expression that never matches. Without it, files with front matter produce a setup error. Other Markdown rules will also see the header and may need configuration.
-
 Select fields in `.markdownlint.json`:
 
 ```json
@@ -176,7 +166,7 @@ Select fields in `.markdownlint.json`:
 
 Omitting `include` checks all string values; `include: []` checks none. Dotted paths select nested fields, including fields inside arrays without numeric indices. Selecting a parent includes its subtree; exclusions win. Paths are case-sensitive, not globs.
 
-To skip front matter and keep markdownlint's default header handling, set `"spellcheck": { "markdown": { "frontMatter": false } }` in `.markdownlint.json` and omit `"frontMatter": "a^"` from `.markdownlint-cli2.jsonc`.
+To skip front matter, set `"spellcheck": { "markdown": { "frontMatter": false } }` in `.markdownlint.json`.
 
 Quoted strings and block values are checked but never autocorrected. Plain values can be corrected only when the result remains a YAML string.
 
