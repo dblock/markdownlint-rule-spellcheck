@@ -1,5 +1,9 @@
 # Changelog
 
+## (Next)
+
+* Your contribution here.
+
 ## 0.2.0 (2026/10/23)
 
 * [#17](https://github.com/dblock/markdownlint-rule-spellcheck/pull/17): Define the vocabulary formatter inline in `collect`, removing the separate formatter module and public export — [@dblock](https://github.com/dblock).
