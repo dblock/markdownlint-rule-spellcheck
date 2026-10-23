@@ -12,7 +12,7 @@ git pull --ff-only origin main
 npm ci
 ```
 
-Choose a Semantic Versioning release number. Use patch versions for fixes, minor versions for compatible features, and major versions for breaking changes. Before 1.0, breaking changes may use a minor version; describe configuration and behavior changes in `CHANGELOG.md`. The first release is `0.1.0`, matching the current package version.
+Choose a Semantic Versioning release number. Use patch versions for fixes, minor versions for compatible features, and major versions for breaking changes. Before 1.0, breaking changes may use a minor version; describe configuration and behavior changes in `CHANGELOG.md`. The commands below use `0.1.0` as an example; substitute the chosen version throughout.
 
 Set the version in `package.json` and `package-lock.json` without creating a commit or tag:
 
