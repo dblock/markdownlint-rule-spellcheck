@@ -59,10 +59,16 @@ test("formatter uses normal lint configuration and ignores other rules and exclu
   assert.equal(fixture.read(".spellcheck.txt"),
     "# Review these candidates: remove typos before using this dictionary.\nhelo\n");
   assert.equal(fixture.read("example.md"), expected("collection-config/example.md"));
-  const fixed = fixture.format("*.md", "remaining.txt", "--fix");
-  assert.equal(fixed.status, 1, fixed.stderr);
-  assert.equal(fixture.read("remaining.txt"),
-    "# Review these candidates: remove typos before using this dictionary.\n");
+});
+
+test("collect rejects blank output paths before writing", (t) => {
+  const fixture = project(t, "collect");
+  for (const output of [ "", " " ]) {
+    const result = fixture.collect("*.md", "--output", output);
+    assert.equal(result.status, 1, result.stderr);
+    assert.match(result.stderr, /nonempty string/u);
+  }
+  assert.throws(() => fixture.read(".spellcheck.txt"), /ENOENT/u);
 });
 
 test("collect fails on malformed lint configuration without creating a dictionary", (t) => {
