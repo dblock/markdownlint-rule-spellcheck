@@ -3,7 +3,6 @@
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { relative, resolve } from "node:path";
 import { parseArgs } from "node:util";
-import { fileURLToPath } from "node:url";
 import { dictionaryEntries, markdownOptions } from "./configuration.mjs";
 
 const usage = "Usage: markdownlint-rule-spellcheck collect <globs...> [--output .spellcheck.txt]\n       markdownlint-rule-spellcheck add <dictionary.txt> [--config .markdownlint.json] [--language en]";
@@ -65,18 +64,44 @@ try {
       writeFileSync(values.config, `${JSON.stringify(config, null, 2)}\n`, { "flag": exists ? "w" : "wx" });
       console.log(`Added ${entry} to ${values.config}.`);
     } else if (command === "collect" && patterns.length) {
+      if (!values.output.trim()) {
+        throw new Error("The spelling candidate output path must be a nonempty string.");
+      }
       const { main } = await import("markdownlint-cli2");
+      let collected = false;
+      const vocabularyFormatter = async ({ directory, results, fsPromises, logMessage }) => {
+        const words = new Set();
+        for (const result of results) {
+          if (result.ruleNames.includes("spellcheck")) {
+            const match = /^Misspelled word: "([^"]+)"\./u.exec(result.errorDetail);
+            if (!match) {
+              throw new Error(`Cannot collect spelling candidate: ${result.errorDetail}`);
+            }
+            words.add(match[1]);
+          }
+        }
+        const entries = [ ...words ].sort();
+        await fsPromises.writeFile(resolve(directory, values.output), [
+          "# Review these candidates: remove typos before using this dictionary.",
+          ...entries, ""
+        ].join("\n"), { "flag": "wx" });
+        collected = true;
+        logMessage(`Created ${values.output} with ${entries.length} candidate words. Review before adding it to dictionaries.`);
+      };
       const status = await main({
         "argv": patterns,
         "optionsOverride": {
           "fix": false,
-          "outputFormatters": [ [ fileURLToPath(new URL("./vocabulary-formatter.mjs", import.meta.url)), values.output ] ]
+          "outputFormatters": [ [ vocabularyFormatter ] ]
         },
         "logMessage": console.log,
         "logError": (message) => { throw new Error(message); }
       });
       if (status > 1) {
         throw new Error(`markdownlint-cli2 failed with exit code ${status}.`);
+      }
+      if (!collected) {
+        throw new Error("markdownlint-cli2 did not collect spelling candidates.");
       }
     } else {
       throw new Error(usage);

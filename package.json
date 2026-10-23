@@ -4,10 +4,7 @@
   "description": "A markdownlint custom rule for spelling checks powered by CSpell.",
   "type": "module",
   "main": "src/index.mjs",
-  "exports": {
-    ".": "./src/index.mjs",
-    "./vocabulary-formatter": "./src/vocabulary-formatter.mjs"
-  },
+  "exports": "./src/index.mjs",
   "bin": {
     "markdownlint-rule-spellcheck": "./src/cli.mjs"
   },

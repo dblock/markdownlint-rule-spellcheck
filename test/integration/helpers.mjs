@@ -24,20 +24,6 @@ export function project(t, name, config = {}) {
     "read": (name) => readFileSync(join(dir, name), "utf8"),
     "run": (...args) => run(cli, args),
     "collect": (...args) => run(fileURLToPath(new URL("../../src/cli.mjs", import.meta.url)), [ "collect", ...args ]),
-    "format": (pattern, output = ".spellcheck.txt", ...args) => {
-      const path = join(dir, ".markdownlint-cli2.jsonc");
-      const original = readFileSync(path, "utf8");
-      const options = JSON.parse(original);
-      options.outputFormatters = [
-        [ fileURLToPath(new URL("../../src/vocabulary-formatter.mjs", import.meta.url)), output ]
-      ];
-      writeFileSync(path, JSON.stringify(options));
-      try {
-        return run(cli, [ pattern, ...args ]);
-      } finally {
-        writeFileSync(path, original);
-      }
-    },
     "add": (...args) => run(fileURLToPath(new URL("../../src/cli.mjs", import.meta.url)), [ "add", ...args ]),
     "command": (...args) => run(fileURLToPath(new URL("../../src/cli.mjs", import.meta.url)), args)
   };

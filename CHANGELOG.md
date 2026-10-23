@@ -3,6 +3,7 @@
 ## (Next)
 
 * Your contribution here.
+* [#17](https://github.com/dblock/markdownlint-rule-spellcheck/pull/17): Define the vocabulary formatter inline in `collect`, removing the separate formatter module and public export — [@dblock](https://github.com/dblock).
 * [#16](https://github.com/dblock/markdownlint-rule-spellcheck/pull/16): Move runtime modules into `src/`, preserving public imports and CLI commands — [@dblock](https://github.com/dblock).
 * [#15](https://github.com/dblock/markdownlint-rule-spellcheck/pull/15): Collect candidates through a markdownlint-cli2 output formatter, honoring project configuration without configuration edits and removing the `globby` runtime dependency — [@dblock](https://github.com/dblock).
 * [#14](https://github.com/dblock/markdownlint-rule-spellcheck/pull/14): Use native front matter diagnostics and fixes in markdownlint 0.42.0, removing the header-stripping workaround and leaving YAML hidden from ordinary Markdown rules — [@dblock](https://github.com/dblock).

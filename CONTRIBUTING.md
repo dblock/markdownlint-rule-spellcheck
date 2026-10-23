@@ -16,7 +16,7 @@ Run `npm run coverage` for unit and integration coverage, including CLI subproce
 
 When profiling, measure cold startup separately from repeated files. Suggestions are cached for at most 256 words per dictionary instance; local dictionaries are still reloaded on every lint invocation.
 
-Use the [candidate formatter](README.md#creating-a-project-dictionary) to collect vocabulary from a normal lint run; review candidates before using the generated file.
+Use the [`collect` command](README.md#creating-a-project-dictionary) to collect vocabulary; review candidates before using the generated file.
 
 Linting checks JavaScript with ESLint and Markdown with markdownlint, including `markdownlint-rule-single-line-paragraphs` to keep paragraphs on one source line.
 
